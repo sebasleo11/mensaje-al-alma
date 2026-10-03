@@ -91,7 +91,7 @@ test('Resend SDK sends the server-selected envelope with HTML, text and stable i
 test('provider errors are rejected rather than marked as accepted', async () => {
   await assert.rejects(deliverWelcomeEmail(user, config, async () => ({
     data: null, error: { name: 'validation_error', message: 'private provider details' }, headers: null,
-  })));
+  } as any)));
 });
 
 test('configuration rejects header injection, unsafe links and non-local HTTP', () => {
