@@ -24,7 +24,7 @@ export async function GET(request: Request) {
 
   const due = await admin
     .from('message_schedules')
-    .select('id,message_id,version')
+    .select('id,message_id,user_id,version')
     .eq('state', 'scheduled')
     .lte('scheduled_at', new Date().toISOString())
     .order('scheduled_at', { ascending: true })
@@ -37,7 +37,7 @@ export async function GET(request: Request) {
   for (const schedule of due.data ?? []) {
     try {
       const started = await admin.rpc('begin_message_schedule', {
-        p_user: (await admin.from('message_schedules').select('user_id').eq('id', schedule.id).single()).data?.user_id,
+        p_user: schedule.user_id,
         p_message: schedule.message_id,
         p_id: schedule.id,
         p_version: schedule.version,
