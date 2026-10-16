@@ -1,7 +1,22 @@
 type AuthFailure = { code?: string; status?: number };
 
 export function authErrorMessage(error: AuthFailure, mode: 'login' | 'register') {
+  if (error.status === 0) {
+    return 'No pudimos conectarnos al servicio de cuentas. Revisá tu conexión y volvé a intentar.';
+  }
+  if (error.status && error.status >= 500) {
+    return 'El servicio de cuentas no está disponible por ahora. Esperá un momento y volvé a intentar.';
+  }
   switch (error.code) {
+    case 'email_address_invalid':
+    case 'validation_failed':
+      return 'Revisá el email y los datos ingresados antes de volver a intentar.';
+    case 'email_address_not_authorized':
+      return 'Por ahora no podemos enviar la confirmación a ese email. Contactá a soporte.';
+    case 'email_provider_disabled':
+      return 'El acceso con email no está disponible por ahora. Podés volver más tarde.';
+    case 'request_timeout':
+      return 'La conexión tardó demasiado. Esperá un momento y volvé a intentar.';
     case 'invalid_credentials':
       return 'El email o la contraseña no coinciden. Revisalos y volvé a intentar.';
     case 'email_not_confirmed':

@@ -1,11 +1,12 @@
 import 'server-only';
 
 import { createServerClient } from '@supabase/ssr';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { getSupabaseConfig } from './config';
 import type { Database } from './database.types';
 
-export async function createClient() {
+export async function createClient(): Promise<SupabaseClient<Database>> {
   const cookieStore = await cookies();
   const { url, key } = getSupabaseConfig();
   // One instance per request; never share a server client between users.

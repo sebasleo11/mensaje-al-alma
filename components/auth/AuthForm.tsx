@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
+import BrandMark from '@/components/BrandMark';
 import { useRouter } from 'next/navigation';
+import { isAuthError } from '@supabase/supabase-js';
 import { ArrowRight, Check, Heart, LockKeyhole } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
-import { isSupabaseConfigured } from '@/utils/supabase/config';
+import { isSupabaseConfigured, SupabaseConfigurationError } from '@/utils/supabase/config';
 import { authErrorMessage } from '@/lib/auth/errors';
 
 type Mode = 'login' | 'register';
@@ -28,7 +30,7 @@ export default function AuthForm({ confirmationFailed = false }: { confirmationF
   }, []);
 
   function switchMode(next: Mode) {
-    if (pending) return;
+    if (inFlight.current) return;
     setMode(next);
     setPassword('');
     setConfirmation('');
@@ -41,20 +43,30 @@ export default function AuthForm({ confirmationFailed = false }: { confirmationF
     if (!configured || inFlight.current) return;
     setError('');
     setNotice('');
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail || !password) {
+      setError('Completá tu email y tu contraseña para continuar.');
+      return;
+    }
+    if (mode === 'register' && password.length < 8) {
+      setError('Usá una contraseña de al menos 8 caracteres.');
+      return;
+    }
     if (mode === 'register' && password !== confirmation) {
       setError('Las contraseñas no coinciden. Revisalas con calma.');
       return;
     }
     inFlight.current = true;
     setPending(true);
+    let navigating = false;
     try {
       const supabase = createClient();
-      const credentials = { email: email.trim(), password };
+      const credentials = { email: normalizedEmail, password };
       const { data, error: authError } = mode === 'login'
         ? await supabase.auth.signInWithPassword(credentials)
         : await supabase.auth.signUp({
           ...credentials,
-          options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+          options: { emailRedirectTo: new URL('/auth/callback', window.location.origin).href },
         });
       if (authError) {
         setError(authErrorMessage(authError, mode));
@@ -70,17 +82,23 @@ export default function AuthForm({ confirmationFailed = false }: { confirmationF
         // createBrowserClient has already persisted the session cookies.
         router.replace('/');
         router.refresh();
+        // Keep the submit lock until navigation unmounts this form.
+        navigating = true;
       } else if (mode === 'register') {
         // Supabase may obfuscate existing accounts; avoid asserting a new account was created.
         setNotice('Revisá tu correo. Si el registro se pudo completar, vas a recibir un enlace para confirmar tu email. Después podés iniciar sesión.');
       } else {
         setError('No pudimos iniciar tu sesión. Volvé a intentar.');
       }
-    } catch {
-      setError('No pudimos conectarnos. Revisá tu conexión y volvé a intentar.');
+    } catch (cause) {
+      setError(cause instanceof SupabaseConfigurationError ? cause.message : isAuthError(cause)
+        ? authErrorMessage(cause, mode)
+        : 'No pudimos conectarnos. Revisá tu conexión y volvé a intentar.');
     } finally {
-      inFlight.current = false;
-      setPending(false);
+      if (!navigating) {
+        inFlight.current = false;
+        setPending(false);
+      }
     }
   }
 
@@ -89,7 +107,7 @@ export default function AuthForm({ confirmationFailed = false }: { confirmationF
     <div className="auth-page min-h-dvh px-5 py-8 sm:px-8 sm:py-12">
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4">
         <Link href="/" className="brand" aria-label="Mensaje al Alma, inicio">
-          <Heart size={23} strokeWidth={1.5} aria-hidden="true" />mensaje al alma<span className="brand-dot">.</span>
+          <BrandMark />mensaje al alma<span className="brand-dot">.</span>
         </Link>
         <Link href="/" className="auth-back-link">Volver al inicio</Link>
       </header>

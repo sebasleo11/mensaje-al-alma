@@ -27,7 +27,7 @@ select throws_ok($$update public.messages set user_id = '22222222-2222-4222-8222
 select results_eq($$delete from public.messages where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' returning id$$, array[]::uuid[], 'Cannot delete another user message');
 select results_eq($$delete from public.messages where id = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc' returning id$$, array['cccccccc-cccc-4ccc-8ccc-cccccccccccc']::uuid[], 'Can delete own message');
 select is((select count(*) from public.messages where id = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'), 0::bigint, 'Own message deleted');
-select throws_ok($$insert into public.messages (user_id,recipient_email,content_type,content_body) values ('11111111-1111-4111-8111-111111111111','one@example.com','photo','Invalid type')$$, '23514', null, 'Invalid content type rejected');
+select throws_ok($$insert into public.messages (user_id,recipient_email,content_type,content_body) values ('11111111-1111-4111-8111-111111111111','one@example.com','document','Invalid type')$$, '23514', null, 'Invalid content type rejected');
 
 reset role;
 set local role anon;
