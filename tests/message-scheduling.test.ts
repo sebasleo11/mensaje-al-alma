@@ -20,6 +20,12 @@ export async function verifyScheduling(){
  assert.equal(occupiedSlots([{state:'prepared'}],[{state:'dispatching'},{state:'cancelled'}]),1,'Transfer/cancel never count twice');
  assert.equal(missingScheduleSchema({code:'PGRST202'}),true);
  assert.equal(missingScheduleSchema({code:'42501'}),false,'Permissions must not be mistaken for missing schema');
+ const recoveryPatch=readFileSync('supabase/patches/20261016_dispatching_recovery.sql','utf8');
+ const existingAttempt=recoveryPatch.indexOf("where message_id=m.id and user_id=p_user and state<>'failed'");
+ const activeSchedule=recoveryPatch.indexOf("state in ('scheduled','blocked','dispatching')");
+ assert.ok(existingAttempt>=0&&existingAttempt<activeSchedule,'Dispatching recovery returns the linked attempt before active-schedule conflict');
+ assert.match(recoveryPatch,/if p_schedule is null then return a;/);
+ assert.match(recoveryPatch,/This is intentionally not a migration/);
  // API transport and Auth are simulated. These assertions do not execute SQL locks.
  let signedIn=true,originAllowed=true,result:any={data:{id:'11111111-1111-4111-8111-111111111111',state:'scheduled'},error:null};
  const calls:any[]=[];
