@@ -5,15 +5,15 @@ import { AuthSessionMissingError, type SupabaseClient } from '@supabase/supabase
 import { createClient } from '@/utils/supabase/client';
 import { isSupabaseConfigured } from '@/utils/supabase/config';
 import type { Database } from '@/utils/supabase/database.types';
-import { isRecipientEmail, loadLatestTextDraft, saveTextDraft } from '@/lib/messages/drafts';
+import { DraftRequestError, draftRecoveryMessage, isRecipientEmail, loadLatestTextDraft, reportDraftFailure, saveTextDraft, withDraftDeadline } from '@/lib/messages/drafts';
+import { LOCAL_DRAFT_KEY, readLocalDraft, writeLocalDraft } from '@/lib/messages/local-draft';
 
-const LOCAL_KEY = 'alma-draft';
 type Source = 'local' | 'cloud' | 'unavailable';
 
 async function verifiedUser(client: SupabaseClient<Database>) {
-  const { data, error } = await client.auth.getUser();
+  const { data, error } = await withDraftDeadline(client.auth.getUser(), 'session');
   // A missing session is expected for visitors. Network/auth failures are not.
-  if (error && !(error instanceof AuthSessionMissingError)) throw error;
+  if (error && !(error instanceof AuthSessionMissingError)) throw new DraftRequestError('session', error.code ?? 'unknown', error.status ?? 0);
   return data.user;
 }
 
@@ -24,6 +24,8 @@ export function useMessageDraft(isOpen: boolean, onNotice: (text: string) => voi
   const [recipient, setRecipient] = useState('');
   const [message, setMessage] = useState('');
   const [saved, setSaved] = useState(false);
+  const [baseline, setBaseline] = useState({ recipient: '', message: '' });
+  const dirty = recipient !== baseline.recipient || message !== baseline.message;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [blocked, setBlocked] = useState(false);
@@ -54,7 +56,10 @@ export function useMessageDraft(isOpen: boolean, onNotice: (text: string) => voi
           draftId.current = null;
           setRecipient('');
           setMessage('');
+          setBaseline({ recipient: '', message: '' });
           setSaved(false);
+          setSource('unavailable');
+          setBlocked(true);
           setLoading(true);
           setRevision(value => value + 1);
         }
@@ -72,13 +77,13 @@ export function useMessageDraft(isOpen: boolean, onNotice: (text: string) => voi
     const current = ++generation.current;
     let active = true;
     setLoading(true);
-    setBlocked(false);
+    setBlocked(true);
     setSaved(false);
     setSource('unavailable');
-    setRecipient('');
-    setMessage('');
+    // Keep visible words while retrying; account changes clear them separately.
     loadedOwner.current = undefined;
     draftId.current = null;
+    const controller = new AbortController();
 
     async function load() {
       // Let the dialog's opening effect finish before publishing any notices.
@@ -86,50 +91,56 @@ export function useMessageDraft(isOpen: boolean, onNotice: (text: string) => voi
       try {
         if (configFailed) throw new Error('Invalid configuration');
         const user = client ? await verifiedUser(client) : null;
-        const draft = user && client ? await loadLatestTextDraft(client, user.id) : null;
+        const draft = user && client ? await loadLatestTextDraft(client, user.id, controller.signal) : null;
         if (!active || generation.current !== current) return;
-        loadedOwner.current = user?.id ?? null;
-        observedOwner.current = user?.id ?? null;
         if (user) {
           setSource('cloud');
           draftId.current = draft?.id ?? null;
           setRecipient(draft?.recipient_email ?? '');
           setMessage(draft?.content_body ?? '');
-          onNotice(draft ? 'Recuperamos tu último borrador de texto de tu cuenta.' : 'Este borrador se guardará en tu cuenta al tocar Guardar.');
+          setBaseline({ recipient: draft?.recipient_email ?? '', message: draft?.content_body ?? '' });
+          let hasLocalDraft = false;
+          // Browser storage may be disabled; it must not block cloud recovery.
+          try { hasLocalDraft = localStorage.getItem(LOCAL_DRAFT_KEY) !== null; } catch {}
+          onNotice(draft ? 'Recuperamos tu último borrador de texto de tu cuenta.' : hasLocalDraft
+            ? 'No encontramos un borrador en esta cuenta. Hay uno guardado en este navegador; para revisarlo, cerrá sesión acá. No lo movimos a tu cuenta.'
+            : 'Este borrador se guardará en tu cuenta al tocar Guardar.');
         } else {
+          const local = readLocalDraft(localStorage);
+          setRecipient(local?.recipient ?? '');
+          setMessage(local?.message ?? '');
+          setBaseline({ recipient: local?.recipient ?? '', message: local?.message ?? '' });
           setSource('local');
-          const raw = localStorage.getItem(LOCAL_KEY);
-          if (raw) {
-            const local: unknown = JSON.parse(raw);
-            if (typeof local !== 'object' || !local) throw new Error('Invalid local draft');
-            const value = local as { recipient?: unknown; message?: unknown };
-            const email = typeof value.recipient === 'string' ? value.recipient : '';
-            setRecipient(isRecipientEmail(email) ? email : '');
-            setMessage(typeof value.message === 'string' ? value.message.slice(0, 5000) : '');
-            onNotice(email && !isRecipientEmail(email)
+          if (local) {
+            onNotice(local.needsEmail
               ? 'Recuperamos tu texto. Ahora agregá el email de esa persona.'
               : 'Recuperamos tu borrador de este navegador.');
-          }
+          } else onNotice('Este borrador se guardará en este navegador al tocar Guardar.');
         }
-      } catch {
+        loadedOwner.current = user?.id ?? null;
+        observedOwner.current = user?.id ?? null;
+        setBlocked(false);
+      } catch (error) {
         if (!active || generation.current !== current) return;
+        controller.abort();
         loadedOwner.current = undefined;
+        setSource('unavailable');
         setBlocked(true);
-        onNotice('No pudimos recuperar tu borrador. Reintentá antes de editar para cuidar tus palabras.');
+        reportDraftFailure('load', error);
+        onNotice(draftRecoveryMessage(error));
       } finally {
         if (active && generation.current === current) setLoading(false);
       }
     }
     void load();
-    return () => { active = false; generation.current++; };
+    return () => { active = false; generation.current++; controller.abort(); };
   }, [isOpen, initialized, client, configFailed, revision, onNotice]);
 
-  async function saveDraft(event: FormEvent) {
-    event.preventDefault();
-    if (loading || blocked || saveInFlight.current || loadedOwner.current === undefined) return;
+  async function saveCurrentDraft() {
+    if (loading || blocked || saveInFlight.current || loadedOwner.current === undefined) return null;
     if (!isRecipientEmail(recipient.trim()) || !message.trim() || message.length > 5000) {
       onNotice('Agregá un email válido y unas palabras para guardar tu borrador.');
-      return;
+      return null;
     }
     saveInFlight.current = true;
     setSaving(true);
@@ -151,16 +162,21 @@ export function useMessageDraft(isOpen: boolean, onNotice: (text: string) => voi
         if (generation.current !== current) return;
         setSaved(true);
         setSource('cloud');
-        onNotice('Tu borrador quedó guardado en tu cuenta. No se envió ningún email.');
+        onNotice('Tu borrador quedó guardado en tu cuenta. No se envió ni se programó ningún email.');
+        setBaseline({ recipient, message });
+        return { source: 'cloud' as const, id };
       } else {
-        localStorage.setItem(LOCAL_KEY, JSON.stringify({ version: 1, recipient: recipient.trim(), message }));
+        writeLocalDraft(localStorage, recipient, message);
         if (generation.current !== current) return;
         setSaved(true);
         setSource('local');
-        onNotice('Tu borrador quedó guardado en este navegador. Para sincronizarlo necesitás iniciar sesión.');
+        onNotice('Tu borrador quedó guardado en este navegador. No se envía ni se mueve automáticamente a una cuenta.');
+        setBaseline({ recipient, message });
+        return { source: 'local' as const, id: null };
       }
-    } catch {
+    } catch (error) {
       if (generation.current === current) {
+        reportDraftFailure('save', error);
         onNotice('No pudimos guardar tu borrador. Tu texto sigue acá: reintentá o copialo para conservarlo.');
       }
     } finally {
@@ -169,9 +185,14 @@ export function useMessageDraft(isOpen: boolean, onNotice: (text: string) => voi
     }
   }
 
+  async function saveDraft(event: FormEvent) {
+    event.preventDefault();
+    await saveCurrentDraft();
+  }
+
   return {
     recipient, setRecipient, message, setMessage, saved, setSaved,
-    loading, saving, blocked, source, saveDraft,
-    retry: () => setRevision(value => value + 1),
+    loading, saving, blocked, source, dirty, saveDraft, saveCurrentDraft,
+    retry: () => { if (!loading && !saving) setRevision(value => value + 1); },
   };
 }

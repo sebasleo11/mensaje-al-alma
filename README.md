@@ -64,7 +64,7 @@ RLS es la barrera de autorización en la base, incluso si un cliente cambia los 
 
 ## Verificación
 
-`npm test` prueba las consultas con el SDK real y transporte HTTP simulado: carga con filtros, inserción, actualización, reintento sin duplicación, validación y errores de permisos. No demuestra que RLS esté aplicado en tu proyecto remoto.
+`npm test` verifica la configuración pública de Auth, el rechazo de claves secretas o referencias de proyecto incompatibles, los mensajes de error y una llamada de registro con el SDK real y transporte HTTP simulado. No crea usuarios ni demuestra que el registro remoto, la entrega de correo o RLS funcionen.
 
 `supabase/tests/messages_rls.test.sql` contiene 16 comprobaciones pgTAP de acceso propio, bloqueo entre usuarios, transferencia de propietario y acceso anónimo. Ejecutalo **en una instancia local/de prueba**, después de la migración, con `supabase test db` si disponés del CLI y un proyecto local configurado. Todo el fixture se revierte. No se ha ejecutado contra una base real en esta sesión.
 
@@ -92,3 +92,15 @@ Referencias: [Password Auth](https://supabase.com/docs/guides/auth/passwords), [
 
 Validación de Auth en esta sesión: build y TypeScript correctos; pruebas de borradores existentes pasan. En navegador con una API local simulada se verificaron error de credenciales, login con redirección a `/`, detección de sesión en el editor, cambio de navegación al cerrar sesión y registro sin sesión con aviso de confirmación. Se inspeccionó visualmente la pantalla móvil. Esto no reemplaza probar cuentas, entrega de correo ni RLS en un proyecto Supabase real.
 También se comprobó el callback PKCE con la API simulada: conserva `localhost`, establece la sesión y muestra «Cerrar sesión» al volver a `/`; un código sin verificador vuelve al login con error.
+
+### Diagnóstico de conexión del 4 de octubre de 2026
+
+La URL local tenía una referencia de proyecto distinta de la incluida en la clave `anon`: faltaba una letra. El dominio configurado devolvió DNS `ENOTFOUND`. El dominio correspondiente a la referencia de la clave resolvió por DNS y respondió por HTTPS: preflight `OPTIONS /auth/v1/signup` 200 y `GET /auth/v1/settings` 200 con la clave existente y CORS para `http://localhost:3000`. Se corrigió solamente la URL en `.env.local`, sin cambiar la clave. El validador ahora rechaza referencias incompatibles en claves anon JWT; las publishable son opacas y requieren validación remota.
+
+Auth informó registro con email habilitado y confirmación de correo requerida. No se pudo consultar la política remota de contraseñas ni Site URL/Redirect URLs desde el endpoint público. Revisá esos valores en el panel y conservá la confirmación habilitada. El formulario ya valida ocho caracteres y coincidencia de contraseñas, bloquea envíos duplicados y distingue registro sin sesión de un fallo.
+
+No hubo navegador conectado ni cuenta de prueba disponible: no se ejecutó el POST de registro real ni se verificaron entrega de correo, callback real o persistencia de sesión. Para completar: reiniciá el servidor de desarrollo, recargá `/login` y registrá una cuenta de prueba; inspeccioná OPTIONS/POST en Red, abrí el enlace de confirmación en el mismo navegador, comprobá el regreso a `/` con sesión y recargá. Después cerrá sesión e iniciá nuevamente. Las comprobaciones históricas con API simulada indicadas arriba no sustituyen esta prueba remota.
+
+## Mis mensajes, envío y multimedia privada
+
+El recorrido completo nuevo está en `/mis-mensajes`. Incluye borradores independientes por ID, envío servidor con Resend y snapshots/cuota protegidos, y multimedia privada con Storage. Requiere aplicar las migraciones incrementales `202610040002` y `202610040003` y configurar las variables server-only nuevas. Consultá [MESSAGES_SETUP.md](./MESSAGES_SETUP.md) para instalación, estados, reintentos, compatibilidad, acceso del destinatario y pruebas pendientes. No se desplegó ni se probó entrega real en esta sesión. La sección histórica de alcance y verificaciones anteriores refleja el estado previo a estos tres bloques.

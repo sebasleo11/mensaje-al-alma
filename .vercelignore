@@ -1,0 +1,25 @@
+# Private local configuration and tooling state
+.env*
+.vercel/
+.git/
+.codex/
+.agents/
+.aws/
+
+# Generated local files; Vercel builds from source
+node_modules/
+.next/
+*.tsbuildinfo
+
+# Local operational documents and SQL (never executed by deployment)
+MESSAGES_SETUP.md
+DRAFT_RECOVERY.md
+AGENTS.md
+CLAUDE.md
+supabase/tests/messages_schema_diagnostic.sql
+supabase/tests/messages_rls.test.sql
+supabase/tests/message_delivery_media.test.sql
+supabase/tests/message_lock_duration.test.sql
+supabase/migrations/202610030001_create_messages.sql
+supabase/migrations/202610040002_messages_panel_delivery.sql
+supabase/migrations/202610040003_private_media.sql

@@ -1,14 +1,19 @@
-import type { Metadata } from 'next';
+'use client';
+
+import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import AuthForm from '@/components/auth/AuthForm';
 
-export const metadata: Metadata = {
-  title: 'Ingresar — Mensaje al Alma',
-  description: 'Ingresá o creá tu cuenta para guardar tus palabras y retomarlas a tu ritmo.',
-};
+function LoginContent() {
+  const searchParams = useSearchParams();
+  const confirmationFailed = searchParams.get('confirmation') === 'failed';
+  return <AuthForm key={confirmationFailed ? 'failed' : 'login'} confirmationFailed={confirmationFailed} />;
+}
 
-export default async function LoginPage({ searchParams }: {
-  searchParams: Promise<{ confirmation?: string }>;
-}) {
-  const { confirmation } = await searchParams;
-  return <AuthForm confirmationFailed={confirmation === 'failed'} />;
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<p className="auth-help px-5 py-12 text-center" role="status">Preparando tu espacio…</p>}>
+      <LoginContent />
+    </Suspense>
+  );
 }
