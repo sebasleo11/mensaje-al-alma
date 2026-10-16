@@ -32,6 +32,10 @@ export async function GET(request: Request) {
 
   const results: Array<{ id: string; state: string }> = [];
   for (const schedule of schedules ?? []) {
+    if (!schedule.user_id) {
+      results.push({ id: schedule.id, state: 'review_required' });
+      continue;
+    }
     try {
       const started = await admin.rpc('begin_message_schedule', {
         p_user: schedule.user_id,
