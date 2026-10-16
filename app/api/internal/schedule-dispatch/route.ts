@@ -7,7 +7,7 @@ import { sendMessage } from '@/lib/messages/send';
 export const maxDuration = 60;
 
 function authorized(request: Request) {
-  const secret = process.env.CRON_SECRET;
+  const secret = process.env.SUPABASE_CRON_SECRET ?? process.env.CRON_SECRET;
   return Boolean(secret && request.headers.get('authorization') === `Bearer ${secret}`);
 }
 
