@@ -8,8 +8,7 @@ export const maxDuration = 60;
 
 function authorized(request: Request) {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  return request.headers.get('authorization') === `Bearer ${secret}`;
+  return Boolean(secret && request.headers.get('authorization') === `Bearer ${secret}`);
 }
 
 export async function GET(request: Request) {
@@ -18,11 +17,9 @@ export async function GET(request: Request) {
   const admin = createAdminClient();
   const config = getEmailConfiguration();
   const recipientSecret = process.env.RECIPIENT_TOKEN_SECRET ?? '';
-  if (recipientSecret.length < 32) {
-    return Response.json({ error: 'Dispatch is not configured' }, { status: 503 });
-  }
+  if (recipientSecret.length < 32) return Response.json({ error: 'Dispatch is not configured' }, { status: 503 });
 
-  const due = await admin
+  const { data: schedules, error } = await admin
     .from('message_schedules')
     .select('id,message_id,user_id,version')
     .eq('state', 'scheduled')
@@ -31,10 +28,10 @@ export async function GET(request: Request) {
     .order('id', { ascending: true })
     .limit(10);
 
-  if (due.error) return Response.json({ error: 'Could not read schedules' }, { status: 503 });
+  if (error) return Response.json({ error: 'Could not read schedules' }, { status: 503 });
 
   const results: Array<{ id: string; state: string }> = [];
-  for (const schedule of due.data ?? []) {
+  for (const schedule of schedules ?? []) {
     try {
       const started = await admin.rpc('begin_message_schedule', {
         p_user: schedule.user_id,
@@ -53,14 +50,15 @@ export async function GET(request: Request) {
         continue;
       }
 
-      const attempt = started.data;
+      const reserved = started.data;
       const result = await sendMessage({
-        reserve: async () => attempt,
-        prepare: async current => {
+        reserve: async () => reserved,
+        prepare: async attempt => {
+          const payload = messageEmail(attempt, recipientSecret);
           const updated = await admin
             .from('message_send_attempts')
-            .update({ email_payload: messageEmail(current, recipientSecret) })
-            .eq('id', current.id)
+            .update({ email_payload: payload })
+            .eq('id', attempt.id)
             .is('email_payload', null);
           if (updated.error) throw updated.error;
         },
@@ -68,11 +66,10 @@ export async function GET(request: Request) {
           const claimed = await admin.rpc('claim_message_send', { p_attempt: attemptId });
           if (claimed.error) throw claimed.error;
           if (!claimed.data) return null;
-          const current = claimed.data.attempt;
           return {
-            attempt: current,
+            attempt: claimed.data.attempt,
             replay: claimed.data.replay,
-            payload: current.email_payload as unknown as CreateEmailOptions,
+            payload: claimed.data.attempt.email_payload as unknown as CreateEmailOptions,
           };
         },
         finish: async (attemptId, state, provider) => {
@@ -83,11 +80,10 @@ export async function GET(request: Request) {
           });
           if (finished.error) throw finished.error;
         },
-        send: (payload, key) =>
-          createResendClient().emails.send(payload, {
-            idempotencyKey: key,
-            signal: AbortSignal.timeout(12000),
-          }),
+        send: (payload, key) => createResendClient().emails.send(payload, {
+          idempotencyKey: key,
+          signal: AbortSignal.timeout(12000),
+        }),
       });
       results.push({ id: schedule.id, state: result.state });
     } catch {
