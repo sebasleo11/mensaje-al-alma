@@ -6,19 +6,19 @@ import * as quota from '../lib/messages/quota';
 import * as scheduling from '../lib/messages/scheduling';
 export async function verifySchedulingPanel(){
  const message={id:'11111111-1111-4111-8111-111111111111',recipient_email:'recipient@example.com',content_body:'Palabras conservadas',content_type:'text',status:'draft',created_at:'2026-10-13T12:00Z',updated_at:'2026-10-13T12:00Z'};
- for(const mode of ['missing','scheduled','uncertain','accepted','credit','exhausted','ordinary_exhausted']){
+ for(const mode of ['missing','scheduled','confirmed','uncertain','accepted','credit','exhausted','ordinary_exhausted']){
   const slots:any[]=[],effects:any[]=[];let cursor=0,dirty=true,view:any;
   const schedule={id:'22222222-2222-4222-8222-222222222222',message_id:message.id,state:'scheduled',local_datetime:'2099-01-01T09:00',time_zone:'America/Argentina/Buenos_Aires',utc_offset_minutes:-180,version:1};
   const react={useState:(initial:any)=>{const i=cursor++;slots[i]??={value:initial};return [slots[i].value,(v:any)=>{slots[i].value=typeof v==='function'?v(slots[i].value):v;dirty=true;}];},useRef:(v:any)=>{const i=cursor++;slots[i]??={current:v};return slots[i];},useCallback:(fn:any)=>{cursor++;return fn;},useEffect:(fn:any,deps:any[])=>{const i=cursor++;if(!slots[i]||deps.some((v:any,j:number)=>slots[i].deps[j]!==v)){slots[i]={deps};effects.push(fn);}}};
-  const requests:string[]=[];let cancelled=false;
+  const requests:string[]=[];let cancelled=false;let confirmed=false;
   const mod={exports:{} as any};
   vm.runInNewContext(transformSync(readFileSync('components/messages/MessagesPanel.tsx','utf8'),{loader:'tsx',format:'cjs',jsx:'automatic'}).code,{
-   module:mod,exports:mod.exports,URLSearchParams,Date,Intl,Number,Error,AbortSignal,crypto:globalThis.crypto,
+   module:mod,exports:mod.exports,URLSearchParams,Date,Intl,Number,Error,AbortSignal,crypto:globalThis.crypto,process:{env:{NODE_ENV:'test'}},
    document:{documentElement:{dataset:{}}},localStorage:{getItem:()=>null},window:{location:{search:''},addEventListener:()=>{},removeEventListener:()=>{}},
    fetch:async(url:string,init:any)=>{
     requests.push(url);
-    const current=mode==='scheduled'&&!cancelled?schedule:null;
-    const data=url.endsWith('/send')?{state:mode}:url.endsWith('/schedule')?(cancelled=true,{schedule:{...schedule,state:'cancelled'}}):url==='/api/messages'?{messages:[message],attempts:[],used:current?1:0,quota:{limit:mode==='credit'||mode==='exhausted'?53:3,additional:mode==='credit'||mode==='exhausted'?50:0,used:mode==='credit'||mode==='ordinary_exhausted'?3:mode==='exhausted'?53:current?1:0,remaining:mode==='credit'?50:mode==='exhausted'||mode==='ordinary_exhausted'?0:current?2:3},schedules:current?[current]:[],schedulingAvailable:mode!=='missing'}:{message,asset:null,mediaUrl:null,attempt:null,schedule:current,schedulingAvailable:mode!=='missing'};
+    const current=(mode==='scheduled'&&!cancelled)||(mode==='confirmed'&&confirmed)?schedule:null;
+    const data=url.endsWith('/send')?{state:mode}:url.endsWith('/schedule')?(mode==='confirmed'?(confirmed=true,{schedule:{...schedule,state:'scheduled'}}):(cancelled=true,{schedule:{...schedule,state:'cancelled'}})):url==='/api/messages'?{messages:[message],attempts:[],used:current?1:0,quota:{limit:mode==='credit'||mode==='exhausted'?53:3,additional:mode==='credit'||mode==='exhausted'?50:0,used:mode==='credit'||mode==='ordinary_exhausted'?3:mode==='exhausted'?53:current?1:0,remaining:mode==='credit'?50:mode==='exhausted'||mode==='ordinary_exhausted'?0:current?2:3},schedules:current?[current]:[],schedulingAvailable:mode!=='missing'}:{message,asset:null,mediaUrl:null,attempt:null,schedule:current,schedulingAvailable:mode!=='missing'};
     return Response.json(data);
    },
    require:(name:string)=>{
@@ -39,16 +39,22 @@ export async function verifySchedulingPanel(){
   function button(label:string){const b=nodes(view).find(n=>n.type==='button'&&text(n)===label);assert.ok(b,'Button '+label);return b;}
   await flush();button(mode==='scheduled'?'Abrir mensaje':'Editar').props.onClick();await flush();
   assert.equal(nodes(view).find(n=>n.type==='textarea').props.value,message.content_body);
-  if(mode==='missing'){assert.match(text(view),/programación todavía no está disponible/);assert.ok(!nodes(view).some(n=>n.type==='button'&&text(n)==='Revisar programación'));}
-  else if(mode==='scheduled'){
+  if(mode==='missing'){assert.match(text(view),/programación todavía no está disponible/);assert.ok(!nodes(view).some(n=>n.type==='button'&&text(n)==='Programar envío'));}
+  else if(mode==='confirmed'){
+   assert.match(text(view),/Todavía no programaste este mensaje/);button('Programar envío').props.onClick();await flush();
+   const date=nodes(view).find(n=>n.type==='input'&&n.props.id==='schedule-date');assert.ok(date,'Scheduling date input appears after opening the flow');date.props.onChange({target:{value:'2099-01-01T09:00'}});await flush();
+   button('Revisar programación').props.onClick();await flush();assert.equal(requests.filter(r=>r.endsWith('/schedule')).length,0,'Review does not create a reservation');
+   button('Confirmar programación').props.onClick();await flush();assert.equal(requests.filter(r=>r.endsWith('/schedule')).length,1,'Confirmation creates one scheduling mutation');
+   assert.match(text(view),/Mensaje preparado/);assert.match(text(view),/En espera de envío/);assert.match(text(view),/Tu mensaje quedó guardado y se enviará automáticamente en la fecha indicada/);assert.ok(!nodes(view).some(n=>n.type==='input'&&n.props.id==='schedule-date'),'Confirmed state closes the scheduling form');assert.ok(!nodes(view).some(n=>n.type==='button'&&text(n)==='Programar envío'),'Confirmed state does not show the create action');
+  }else if(mode==='scheduled'){
    assert.equal(nodes(view).find(n=>n.type==='fieldset').props.disabled,true);
-   assert.ok(!nodes(view).some(n=>n.type==='button'&&text(n)==='Revisar envío'));
-   button('Cancelar programación y conservar borrador').props.onClick();await flush();const cancel=button('Confirmar cancelación').props.onClick;cancel();cancel();await flush();assert.equal(requests.filter(r=>r.endsWith('/schedule')).length,1,'Double click issues one scheduling mutation');
+   assert.ok(!nodes(view).some(n=>n.type==='button'&&text(n)==='Enviar ahora'));
+   button('Cancelar programación').props.onClick();await flush();const cancel=button('Confirmar cancelación').props.onClick;cancel();cancel();await flush();assert.equal(requests.filter(r=>r.endsWith('/schedule')).length,1,'Double click issues one scheduling mutation');
    assert.equal(nodes(view).find(n=>n.type==='textarea').props.value,message.content_body);assert.equal(nodes(view).find(n=>n.type==='fieldset').props.disabled,false);
-  }else if(mode==='credit'){assert.equal(button('Revisar envío').props.disabled,false);assert.match(text(view),/50 de 53 envíos disponibles/);}
-  else if(mode==='exhausted'||mode==='ordinary_exhausted'){assert.equal(button('Revisar envío').props.disabled,true);assert.match(text(view),/No te quedan envíos/);}
+  }else if(mode==='credit'){assert.equal(button('Enviar ahora').props.disabled,false);assert.match(text(view),/50 de 53 envíos disponibles/);}
+  else if(mode==='exhausted'||mode==='ordinary_exhausted'){assert.equal(button('Enviar ahora').props.disabled,true);assert.match(text(view),/No te quedan envíos/);}
   else{
-   button('Revisar envío').props.onClick();await flush();await button('Confirmar envío ahora').props.onClick();await flush();
+   button('Enviar ahora').props.onClick();await flush();await button('Confirmar envío ahora').props.onClick();await flush();
    assert.equal(nodes(view).some(n=>n.type==='textarea'),mode!=='accepted','Immediate editor closes only on accepted');
   }
   assert.ok(!requests.some(r=>r.includes('/scheduled-messages/run')));

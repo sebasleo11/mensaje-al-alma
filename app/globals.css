@@ -120,6 +120,7 @@ h1 svg{max-width:100%}
 }
 
 h3,.steps h3,.format-card h3{font-size:var(--text-body)}
+.schedule-status-card{display:flex;align-items:flex-start;gap:12px;padding:16px;margin:18px 0;border:1px solid var(--line);border-radius:10px;background:var(--pale);color:var(--green)}.schedule-status-card>div{min-width:0}.schedule-status-card strong{display:block;font-family:'Manrope',sans-serif;font-weight:650}.schedule-status-card p{color:var(--muted);font-size:var(--text-ui);line-height:1.6;margin-top:4px}.schedule-blocked{background:var(--sand);color:#8a7042}.schedule-dispatching{background:#edf0e6}.schedule-finished{background:#e9efe8}.schedule-cancelled{background:transparent;color:var(--muted)}.schedule-uncertain{background:var(--sand);color:#8a7042}
 
 /* Space for larger copy without changing the existing responsive breakpoints. */
 .card-top,.card-bottom,.hero-bottom{flex-wrap:wrap;gap:.75rem}
