@@ -9,6 +9,7 @@ import { verifyDrafts } from './drafts.test';
 import { verifyMessageHttp } from './messages-http.test';
 import { verifyMessageFeatures } from './message-features.test';
 import { verifyDraftHook } from './draft-hook.test';
+import { verifyMercadoPago } from './mercadopago.test';
 
 const key = (role = 'anon', ref = 'testproject') => `eyJhbGciOiJIUzI1NiJ9.${Buffer.from(JSON.stringify({ role, ref })).toString('base64url')}.test`;
 const url = 'https://testproject.supabase.co';
@@ -53,7 +54,7 @@ async function verifySignup() {
   assert.equal(requests, 1);
 }
 
-verifySignup().then(verifyDrafts).then(verifyDraftHook).then(verifyMessageFeatures).then(verifyMessageHttp).then(verifyScheduling).then(verifySchedulingPanel).then(verifyQuota).then(() => console.log('OK: configuración, errores de Auth y signup con transporte simulado.')).catch(() => {
+verifySignup().then(verifyDrafts).then(verifyDraftHook).then(verifyMessageFeatures).then(verifyMessageHttp).then(verifyScheduling).then(verifySchedulingPanel).then(verifyQuota).then(verifyMercadoPago).then(() => console.log('OK: configuración, errores de Auth y signup con transporte simulado.')).catch(() => {
   console.error('Falló la verificación de Auth o borradores.');
   process.exitCode = 1;
 });

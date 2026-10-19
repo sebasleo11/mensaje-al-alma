@@ -8,6 +8,8 @@ export type Asset = { id: string; message_id: string; user_id: string; path: str
 export type AttemptState = 'prepared' | 'sending' | 'uncertain' | 'accepted' | 'delivered' | 'bounced' | 'failed';
 export type SendAttempt = { id: string; message_id: string; user_id: string; recipient_email: string; content_type: ContentType; content_body: string; asset_id: string | null; email_payload: Record<string, unknown> | null; sender: string; app_url: string; state: AttemptState; provider_id: string | null; lease_until: string | null; revoked_at: string | null; created_at: string; updated_at: string };
 export type MessageQuota = { limit:number; additional:number; used:number; remaining:number };
+export type PaymentOrder = { id:string; user_id:string; package_code:string; credit_amount:number; amount:number; currency:'ARS'; status:'pending'|'approved'|'rejected'|'cancelled'|'refunded'|'charged_back'; external_reference:string; idempotency_key:string; mp_preference_id:string|null; mp_payment_id:string|null; mp_status:string|null; mp_status_detail:string|null; created_at:string; updated_at:string; approved_at:string|null };
+export type MessageCreditGrant = { id:string; user_id:string; source_type:'mercado_pago'; source_id:string; amount:number; status:'active'|'revoked'; created_at:string };
 export type MessageSchedule = { id:string; message_id:string; user_id:string; scheduled_at:string; time_zone:string; local_datetime:string; utc_offset_minutes:number; message_updated_at:string; asset_id:string|null; version:number; state:'scheduled'|'blocked'|'dispatching'|'finished'|'cancelled'; attempt_id:string|null; started_at:string|null; cancelled_at:string|null; created_at:string; updated_at:string; last_error_code:string|null; confirmation:Record<string,unknown> };
 type Table<Row, Insert = Partial<Row>, Update = Partial<Row>> = { Row: Row; Insert: Insert; Update: Update; Relationships: [] };
 export type Database = {
@@ -17,6 +19,8 @@ export type Database = {
   message_assets: Table<Asset>;
   message_send_attempts: Table<SendAttempt>;
   message_send_accounts: Table<{ user_id: string; created_at: string }>;
+  payment_orders: Table<PaymentOrder>;
+  message_credit_grants: Table<MessageCreditGrant>;
  }; Views: { [_ in never]: never }; Functions: {
   change_message_schedule: { Args: {p_user:string;p_message:string;p_id:string;p_action:string;p_expected:string|null;p_version:number|null;p_at:string|null;p_zone:string|null;p_local:string|null;p_offset:number|null}; Returns: MessageSchedule };
   begin_message_schedule: {Args:{p_user:string;p_message:string;p_id:string;p_version:number;p_sender:string;p_app_url:string};Returns:SendAttempt|null};
@@ -29,5 +33,6 @@ export type Database = {
   reserve_message_asset: { Args: { p_user: string; p_message: string; p_mime: string; p_bytes: number; p_ext: string }; Returns: Asset };
   complete_message_asset: { Args: { p_user: string; p_asset: string; p_bytes: number; p_duration: number | null }; Returns: undefined };
   mark_asset_cleanup: { Args: { p_user: string; p_asset: string; p_expired_only?: boolean }; Returns: string | null };
+  reconcile_payment_order: { Args: {p_external_reference:string;p_package_code:string;p_payment_id:string;p_preference_id:string;p_mp_status:string;p_mp_status_detail:string|null;p_status:string;p_amount:number;p_currency:string}; Returns: PaymentOrder };
  }; Enums: { [_ in never]: never }; CompositeTypes: { [_ in never]: never } };
 };
