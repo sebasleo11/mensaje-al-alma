@@ -2,8 +2,8 @@ import { MercadoPagoConfig as MercadoPagoSdkConfig, Payment, Preference } from '
 
 export type MercadoPagoConfig = {
   accessToken: string;
-  webhookSecret: string;
-  notificationUrl: string;
+  webhookSecret?: string;
+  notificationUrl?: string;
   appUrl: string;
 };
 
@@ -12,7 +12,7 @@ export type PreferenceInput = {
   packageCode: string;
   title: string;
   amountArs: number;
-  currency: string;
+  currency: 'ARS';
   payerEmail?: string;
 };
 
@@ -30,11 +30,17 @@ export type MercadoPagoPayment = {
 export type MercadoPagoPreference = {
   id: string;
   external_reference?: string | null;
+  initPoint?: string | null;
   items?: Array<{ id?: string; unit_price?: number; currency_id?: string; quantity?: number }>;
 };
 
 export class MercadoPagoConfigurationError extends Error {}
-export class MercadoPagoProviderError extends Error {}
+export class MercadoPagoProviderError extends Error {
+  constructor(message: string, public readonly providerCause?: unknown) {
+    super(message);
+    this.name = 'MercadoPagoProviderError';
+  }
+}
 
 function required(name: string) {
   const value = process.env[name]?.trim();
@@ -51,17 +57,43 @@ function publicAppUrl() {
   return url.origin;
 }
 
-export function getMercadoPagoConfig(): MercadoPagoConfig {
-  const notificationUrl = required('MP_NOTIFICATION_URL');
-  const parsed = new URL(notificationUrl);
-  if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.search || parsed.hash) {
-    throw new MercadoPagoConfigurationError('MP_NOTIFICATION_URL debe ser una URL HTTPS pública.');
+function isLocalAppUrl(appUrl: string) {
+  return ['localhost', '127.0.0.1', '[::1]'].includes(new URL(appUrl).hostname);
+}
+
+export function assertCheckoutEnvironment(appUrl: string) {
+  if (isLocalAppUrl(appUrl) && process.env.MP_ENVIRONMENT !== 'test') {
+    throw new MercadoPagoConfigurationError('Checkout Pro local requiere MP_ENVIRONMENT=test.');
+  }
+}
+
+export function getMercadoPagoConfig(options: { requireWebhookSecret?: boolean } = {}): MercadoPagoConfig {
+  const appUrl = publicAppUrl();
+  const localTest = isLocalAppUrl(appUrl) && process.env.MP_ENVIRONMENT === 'test';
+  const rawNotificationUrl = process.env.MP_NOTIFICATION_URL?.trim();
+  let notificationUrl: string | undefined;
+  if (rawNotificationUrl) {
+    const parsed = new URL(rawNotificationUrl);
+    const localNotification = ['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname);
+    if (localTest && localNotification) {
+      notificationUrl = undefined;
+    } else if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.search || parsed.hash) {
+      throw new MercadoPagoConfigurationError('MP_NOTIFICATION_URL debe ser una URL HTTPS pública.');
+    } else {
+      notificationUrl = parsed.toString();
+    }
+  } else if (!(isLocalAppUrl(appUrl) && process.env.MP_ENVIRONMENT === 'test')) {
+    notificationUrl = `${appUrl}/api/payments/webhook`;
+  }
+  const webhookSecret = process.env.MP_WEBHOOK_SECRET?.trim();
+  if (!webhookSecret && (options.requireWebhookSecret === true || !localTest)) {
+    throw new MercadoPagoConfigurationError('Falta la configuración server-side MP_WEBHOOK_SECRET.');
   }
   return {
     accessToken: required('MP_ACCESS_TOKEN'),
-    webhookSecret: required('MP_WEBHOOK_SECRET'),
-    notificationUrl: parsed.toString(),
-    appUrl: publicAppUrl(),
+    webhookSecret,
+    notificationUrl,
+    appUrl,
   };
 }
 
@@ -69,28 +101,40 @@ export function createMercadoPagoClient(config: MercadoPagoConfig) {
   return new MercadoPagoSdkConfig({ accessToken: config.accessToken, options: { timeout: 10_000 } });
 }
 
+export function preferenceNotificationField(config: MercadoPagoConfig) {
+  return config.notificationUrl ? { notification_url: config.notificationUrl } : {};
+}
+
+export function preferenceAutoReturnField(appUrl: string) {
+  const url = new URL(appUrl);
+  return isLocalAppUrl(appUrl) || url.protocol !== 'https:' ? {} : { auto_return: 'approved' as const };
+}
+
 export async function createMercadoPagoPreference(config: MercadoPagoConfig, input: PreferenceInput, idempotencyKey: string) {
+  assertCheckoutEnvironment(config.appUrl);
+  const unitPrice = Number(input.amountArs);
+  if (!Number.isFinite(unitPrice) || unitPrice <= 0) throw new MercadoPagoProviderError('El importe de la preferencia no es válido.');
   try {
     const response = await new Preference(createMercadoPagoClient(config)).create({
       body: {
-        items: [{ id: input.packageCode, title: input.title, quantity: 1, unit_price: input.amountArs, currency_id: input.currency }],
+        items: [{ id: input.packageCode, title: input.title, quantity: 1, unit_price: unitPrice, currency_id: 'ARS' }],
         payer: input.payerEmail ? { email: input.payerEmail } : undefined,
         external_reference: input.externalReference,
-        notification_url: config.notificationUrl,
+        ...preferenceNotificationField(config),
         back_urls: {
           success: `${config.appUrl}/pagos/resultado?status=success`,
           pending: `${config.appUrl}/pagos/resultado?status=pending`,
           failure: `${config.appUrl}/pagos/resultado?status=failure`,
         },
-        auto_return: 'approved',
+        ...preferenceAutoReturnField(config.appUrl),
       },
       requestOptions: { idempotencyKey },
     });
-    if (!response.id || !response.init_point) throw new MercadoPagoProviderError('Mercado Pago no devolvió una preferencia utilizable.');
+    if (!response.id || !response.init_point) throw new MercadoPagoProviderError('Mercado Pago no devolvió un enlace de Checkout Pro utilizable.');
     return { id: response.id, initPoint: response.init_point, sandboxInitPoint: response.sandbox_init_point ?? null };
   } catch (error) {
     if (error instanceof MercadoPagoProviderError) throw error;
-    throw new MercadoPagoProviderError('No pudimos crear la preferencia de Mercado Pago.');
+    throw new MercadoPagoProviderError('No pudimos crear la preferencia de Mercado Pago.', error);
   }
 }
 
@@ -122,10 +166,12 @@ export async function getMercadoPagoPreference(config: MercadoPagoConfig, prefer
     return {
       id: response.id ?? preferenceId,
       external_reference: response.external_reference ?? null,
+      initPoint: response.init_point ?? null,
       items: response.items?.map(item => ({ id: item.id, unit_price: item.unit_price, currency_id: item.currency_id, quantity: item.quantity })),
     } satisfies MercadoPagoPreference;
-  } catch {
-    throw new MercadoPagoProviderError('No pudimos consultar la preferencia en Mercado Pago.');
+  } catch (error) {
+    if (error instanceof MercadoPagoProviderError) throw error;
+    throw new MercadoPagoProviderError('No pudimos consultar la preferencia en Mercado Pago.', error);
   }
 }
 

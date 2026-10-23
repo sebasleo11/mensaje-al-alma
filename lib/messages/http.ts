@@ -5,7 +5,7 @@ export class HttpError extends Error { constructor(public status: number, messag
 export function reply(data: unknown, status = 200) { return Response.json(data, { status, headers: { 'Cache-Control': 'private, no-store', 'Referrer-Policy': 'no-referrer' } }); }
 export function validId(value: string) { if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) throw new HttpError(400, 'No encontramos ese mensaje.'); return value; }
 function appOrigin(){
- const url=new URL(process.env.APP_URL??'');const local=['localhost','127.0.0.1','[::1]'].includes(url.hostname);
+ const url=new URL(process.env.APP_URL?.trim()||process.env.NEXT_PUBLIC_APP_URL||'');const local=['localhost','127.0.0.1','[::1]'].includes(url.hostname);
  if((url.protocol!=='https:'&&!(url.protocol==='http:'&&local))||url.username||url.password||url.search||url.hash||url.pathname!=='/')throw new Error('App origin unavailable');
  return url.origin;
 }

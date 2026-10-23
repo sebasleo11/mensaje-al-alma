@@ -29,6 +29,7 @@ export async function verifySchedulingPanel(){
     if(name==='@/utils/supabase/client')return {createClient:()=>({auth:{onAuthStateChange:()=>({data:{subscription:{unsubscribe:()=>{}}}})}})};
     if(name==='@/utils/supabase/config')return {};
     if(name==='@/lib/media/browser')return {uploadPrivateFile:()=>{throw new Error('No media upload allowed in this test');}};
+    if(name==='@/lib/payments/browser')return {openCheckout:()=>{throw new Error('No checkout allowed in this test');}};
     if(['next/link','lucide-react','./MediaPicker','@/components/BrandMark'].includes(name))return new Proxy({}, {get:()=>()=>null});
     throw new Error('Unexpected '+name);
    }

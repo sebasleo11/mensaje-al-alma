@@ -1,6 +1,6 @@
-# Mercado Pago local — etapa preparada
+# Mercado Pago local — Checkout Pro y reconciliación preparados
 
-Esta etapa prepara Checkout Pro sin activar productos comerciales, sin crear preferencias y sin tocar Production.
+Checkout Pro local abrió correctamente en `init_point` con el paquete de prueba de ARS 100. En localhost se omite `auto_return`, porque Mercado Pago rechaza esa combinación con URLs HTTP locales. No se activaron productos comerciales ni se tocó Production.
 
 ## Paquetes
 
@@ -22,7 +22,9 @@ La reserva actual de `message_send_attempts` y `message_schedules` seguirá sien
 
 - `POST /api/payments/checkout` requiere un paquete habilitado, por lo que actualmente no puede crear una preferencia.
 - `POST /api/mercadopago/webhook` valida `x-signature`, consulta el pago server-side y delega la reconciliación a `reconcile_payment_order`.
-- La RPC de reconciliación acredita una única vez mediante `message_credit_grants`, pero no existe en Production porque la migración no fue aplicada.
+- La RPC de reconciliación actualiza `payment_orders`, guarda `mp_payment_id` y acredita una única vez mediante `message_credit_grants` usando la clave única `(source_type, source_id)`.
+- `/pagos/resultado` lee `status`, `payment_id` y `external_reference`. Si vuelve con identificadores, llama a `/api/payments/reconcile`, que consulta `Payment.get`, valida la orden/preferencia/importe y ejecuta la misma RPC. Esto cubre localhost cuando no hay túnel HTTPS para webhooks.
+- La migración de pagos sigue preparada localmente y no fue aplicada en Production; la reconciliación real queda pendiente de aplicar el esquema autorizado y verificar el webhook.
 - El transporte server-side usa `mercadopago@3.2.1`: `MercadoPagoConfig`, `Preference.create`, `Payment.get` y `WebhookSignatureValidator`. No se inicializa desde componentes de navegador.
 
 ## Variables esperadas
