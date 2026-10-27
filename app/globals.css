@@ -200,8 +200,7 @@ dialog{overflow:auto}
 :root:not([data-theme=dark]) .floating-note>span{color:#5d7658}
 :root:not([data-theme=dark]) body{background-color:var(--bg);background-image:linear-gradient(rgba(250,249,246,.84),rgba(250,249,246,.84)),url('/images/hero-background-still.webp');background-position:center top;background-size:cover;background-attachment:fixed;background-repeat:no-repeat}
 :root[data-theme=dark] body{background-color:var(--bg);background-image:linear-gradient(rgba(24,36,31,.82),rgba(24,36,31,.82)),url('/images/hero-background-still.webp');background-position:center top;background-size:cover;background-attachment:fixed;background-repeat:no-repeat}
-.footer-ambient{background-image:linear-gradient(rgba(24,36,31,.42),rgba(24,36,31,.62)),url('/images/hero-background-still.webp');background-position:center;background-size:cover}
-:root:not([data-theme=dark]) .footer-ambient{background-image:linear-gradient(rgba(250,249,246,.28),rgba(24,36,31,.68)),url('/images/hero-background-still.webp')}
+.footer-ambient{background:transparent}
 @media(max-width:760px){:root:not([data-theme=dark]) body,:root[data-theme=dark] body{background-attachment:scroll;background-size:cover}}
 .hero-video,.hero-veil{-webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 calc(100% - 190px),transparent 100%);mask-image:linear-gradient(to bottom,#000 0%,#000 calc(100% - 190px),transparent 100%);-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
 .footer-ambient-video{-webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 190px);mask-image:linear-gradient(to bottom,transparent 0%,#000 190px);-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
