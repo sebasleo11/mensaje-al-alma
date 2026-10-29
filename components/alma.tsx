@@ -25,6 +25,9 @@ export default function Alma() {
  const dialog = useRef<HTMLDialogElement>(null);
  const [attachment,setAttachment] = useState<string>('');
  const [videoLimit,setVideoLimit] = useState<45|900>(45);
+ const [giftName,setGiftName] = useState('');
+ const [giftFrom,setGiftFrom] = useState('');
+ const [giftFallbackText,setGiftFallbackText] = useState('');
  const selectedFormat = formats.find(item => item.name === format) ?? formats[0];
  const SelectedFormatIcon = selectedFormat.icon;
  useEffect(()=>{try{setDark(localStorage.getItem('alma-theme')==='dark');}catch{}},[]);
@@ -51,6 +54,129 @@ export default function Alma() {
   return () => window.removeEventListener('beforeunload', warn);
  }, [panel, dirty]);
  function openComposer(selected:Format='Texto') {setFormat(selected);setAttachment('');setVideoLimit(45);setSaved(false);setPanel('message');}
+ const invitationUrl = 'https://mensaje-al-alma.vercel.app/';
+ function invitationText() {
+  return `${giftName.trim()}, quiero invitarte a conocer Mensaje al Alma: un espacio para guardar y compartir palabras, recuerdos y sentimientos con las personas que querés.\n\nDescubrilo acá: ${invitationUrl}\n\nCon cariño,\n${giftFrom.trim()}`;
+ }
+ function giftFieldsReady() {
+  if (giftName.trim() && giftFrom.trim()) return true;
+  setNotice('Completá los dos nombres para preparar tu invitación.');
+  return false;
+ }
+ async function copyInvitation(text = invitationText()) {
+  try {
+   await navigator.clipboard.writeText(text);
+   setGiftFallbackText('');
+   setNotice('La invitación está copiada, con el enlace incluido. Ya podés compartirla.');
+   return true;
+  } catch {
+   setGiftFallbackText(text);
+   setNotice('No pudimos copiarla automáticamente. Seleccioná el texto de abajo y copialo.');
+   return false;
+  }
+ }
+ async function createGiftCard() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1200;
+  canvas.height = 900;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Canvas no disponible');
+  const image = new window.Image();
+  image.src = '/images/hero-background-still.webp';
+  await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(new Error('Imagen no disponible')); });
+  const scale = Math.max(canvas.width / image.width, canvas.height / image.height);
+  const width = image.width * scale;
+  const height = image.height * scale;
+  context.drawImage(image, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
+  context.fillStyle = 'rgba(20, 34, 27, .58)';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = '#fffdf6';
+  context.textAlign = 'center';
+  const drawWrappedText = (text:string, x:number, startY:number, maxWidth:number, lineHeight:number, maxLines:number) => {
+   const words = text.split(/\s+/);
+   const lines:string[] = [];
+   let line = '';
+   for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (line && context.measureText(candidate).width > maxWidth) {
+     lines.push(line);
+     line = word;
+    } else line = candidate;
+   }
+   if (line) lines.push(line);
+   const visibleLines = lines.slice(0, maxLines);
+   if (lines.length > maxLines) {
+    let last = visibleLines[maxLines - 1] ?? '';
+    while (last && context.measureText(`${last}…`).width > maxWidth) last = last.slice(0, -1);
+    visibleLines[maxLines - 1] = `${last.trimEnd()}…`;
+   }
+   visibleLines.forEach((currentLine, index) => context.fillText(currentLine, x, startY + index * lineHeight));
+   return startY + visibleLines.length * lineHeight;
+  };
+  context.font = '600 28px Arial, sans-serif';
+  context.letterSpacing = '4px';
+  context.fillText('UNA INVITACIÓN PARA VOS', canvas.width / 2, 150);
+  context.letterSpacing = '0px';
+  context.font = '500 64px Georgia, serif';
+  context.fillText('Mensaje al Alma', canvas.width / 2, 280);
+  context.font = '400 34px Arial, sans-serif';
+  const invitationLineEnd = drawWrappedText(`${giftName.trim()}, te invito a conocer`, canvas.width / 2, 415, 980, 46, 3);
+  context.fillText('un espacio para compartir lo que importa.', canvas.width / 2, invitationLineEnd + 10);
+  context.fillStyle = '#e7c98b';
+  context.font = '600 30px Arial, sans-serif';
+  context.fillText(invitationUrl, canvas.width / 2, 610);
+  context.fillStyle = '#fffdf6';
+  context.font = '400 28px Georgia, serif';
+  drawWrappedText(`Con cariño, ${giftFrom.trim()}`, canvas.width / 2, 760, 1000, 36, 2);
+  return new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Imagen no generada')), 'image/png'));
+ }
+ function downloadGiftCard(blob: Blob) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'invitacion-mensaje-al-alma.png';
+  link.click();
+  URL.revokeObjectURL(url);
+ }
+ async function offerGiftFallback(blob: Blob) {
+  let downloaded = false;
+  try {
+   downloadGiftCard(blob);
+   downloaded = true;
+  } catch {}
+  const copied = await copyInvitation();
+  if (downloaded && copied) setNotice('La tarjeta se descargó y el texto está copiado. Adjuntá la imagen cuando compartas la invitación.');
+  else if (downloaded) setNotice('La tarjeta se descargó. Copiá el texto de abajo para compartirlo.');
+  else if (copied) setNotice('El texto está copiado, pero no pudimos descargar la tarjeta.');
+  else setNotice('No pudimos descargar la tarjeta ni copiar el texto automáticamente. Seleccioná el texto de abajo y probá de nuevo.');
+ }
+ async function shareGiftCard() {
+  if (!giftFieldsReady()) return;
+  setGiftFallbackText('');
+  let blob:Blob;
+  try {
+   blob = await createGiftCard();
+  } catch {
+   setNotice('No pudimos generar la tarjeta. Probá de nuevo o usá “Copiar invitación”.');
+   return;
+  }
+  const file = new File([blob], 'invitacion-mensaje-al-alma.png', {type: 'image/png'});
+  const shareData = {title: 'Una invitación a Mensaje al Alma', text: invitationText(), files: [file]};
+  let canShareInvitation = false;
+  try {
+   canShareInvitation = typeof navigator.share === 'function' && typeof navigator.canShare === 'function' && navigator.canShare(shareData);
+  } catch {}
+  if (canShareInvitation) {
+   try {
+    await navigator.share(shareData);
+    setNotice('La tarjeta y el texto quedaron disponibles para compartir.');
+    return;
+   } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return;
+   }
+  }
+  await offerGiftFallback(blob);
+ }
  function handleAttachmentChange(event: ChangeEvent<HTMLInputElement>) {
   const file = event.target.files?.[0];
   setAttachment('');
@@ -133,13 +259,17 @@ export default function Alma() {
     </fieldset>
    </form>
   </> : panel==='gift' ? <>
-   <span className="dialog-gift"><Gift size={29}/></span><span className="eyebrow">UN REGALO CON SENTIDO</span><h2>Una invitación al corazón.</h2>
-   <p className="dialog-intro">Prepará una tarjeta para alguien especial. Podés copiarla y compartirla como prefieras.</p>
-   <form onSubmit={async event=>{event.preventDefault();const form=new FormData(event.currentTarget);const text=`${form.get('name')}, te regalo una invitación a Mensaje al Alma: un espacio para esas palabras, recuerdos y afectos que merecen compartirse. Con cariño, ${form.get('from')}.`;try{await navigator.clipboard.writeText(text);setNotice('Tu invitación está copiada. Ya podés compartirla.');}catch{setNotice(text);}}}>
-    <label htmlFor="gift-name">¿A quién querés invitar?</label><input id="gift-name" name="name" placeholder="Su nombre" required maxLength={100}/>
-    <label htmlFor="gift-from">Tu nombre</label><input id="gift-from" name="from" placeholder="De parte de…" required maxLength={100}/>
-    <button className="button primary full" type="submit">Copiar mi invitación <Gift size={17}/></button>
-    <p className="local-note">Esta tarjeta es una invitación de texto. No realiza una compra ni envía un correo.</p>
+   <span className="dialog-gift"><Gift size={29}/></span><span className="eyebrow">UNA INVITACIÓN CON SENTIDO</span><h2>Invitá a conocer Mensaje al Alma.</h2>
+   <p className="dialog-intro">Creá una tarjeta cálida y personalizada para compartir este espacio con alguien especial.</p>
+   <div className="gift-how"><p><strong>¿Cómo funciona?</strong></p><ol><li>Completá los nombres.</li><li>Compartí la tarjeta o copiá la invitación.</li><li>La persona invitada puede entrar a conocer Mensaje al Alma.</li></ol></div>
+   <form onSubmit={event=>{event.preventDefault();void copyInvitation();}}>
+    <label htmlFor="gift-name">¿A quién querés invitar?</label><input id="gift-name" name="name" placeholder="Su nombre" required maxLength={100} value={giftName} onChange={event=>{setGiftName(event.target.value);setGiftFallbackText('');}}/>
+    <label htmlFor="gift-from">¿Quién invita?</label><input id="gift-from" name="from" placeholder="Tu nombre" required maxLength={100} value={giftFrom} onChange={event=>{setGiftFrom(event.target.value);setGiftFallbackText('');}}/>
+    <div className="gift-card-preview" aria-label="Vista previa de la tarjeta de invitación" style={{backgroundImage:"url('/images/hero-background-still.webp')"}}><div className="gift-card-preview-overlay"><span>UNA INVITACIÓN PARA VOS</span><strong>Mensaje al Alma</strong><p>{giftName.trim() || 'Tu nombre invitado'}, te invito a conocer un espacio para compartir lo que importa.</p><a href={invitationUrl} target="_blank" rel="noreferrer">{invitationUrl}</a><small>Con cariño, {giftFrom.trim() || 'tu nombre'}</small></div></div>
+    <div className="gift-actions"><button className="button primary full" type="button" onClick={()=>void shareGiftCard()}>Compartir tarjeta <Send size={17}/></button><button className="button secondary full" type="submit">Copiar invitación <Gift size={17}/></button></div>
+    {giftFallbackText ? <textarea className="gift-fallback-text" aria-label="Texto de la invitación para copiar manualmente" readOnly value={giftFallbackText} onFocus={event=>event.currentTarget.select()}/> : null}
+    <p className="local-note">La invitación es gratuita y no incluye la compra de un mensaje.</p>
+    <p className="local-note">No realiza una compra ni envía correos automáticamente. Si tu navegador no puede compartir imagen y texto juntos, se descarga la tarjeta y se copia el texto para que los adjuntes vos.</p>
    </form>
   </> : panel==='privacy' ? <>
    <span className="eyebrow">TU ESPACIO PERSONAL</span><h2>Privacidad en esta versión</h2>

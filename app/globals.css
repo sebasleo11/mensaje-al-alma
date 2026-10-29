@@ -133,6 +133,26 @@ h3,.steps h3,.format-card h3{font-size:var(--text-body)}
 .format-title>span{flex-wrap:wrap;min-width:0}
 .format-card{overflow:visible}
 dialog{overflow:auto}
+.gift-how{padding:16px 18px;background:var(--pale);border-radius:9px;margin:0 0 22px;color:var(--muted)}
+.gift-how p{margin:0 0 7px;color:var(--ink);font-size:var(--text-ui)}
+.gift-how ol{margin:0;padding-left:22px;font-size:var(--text-ui);line-height:1.7}
+.gift-how li+li{margin-top:3px}
+.gift-card-preview{position:relative;min-height:245px;margin:24px 0 6px;border-radius:12px;background-position:center;background-size:cover;overflow:hidden;box-shadow:0 12px 28px rgba(38,57,44,.16)}
+.gift-card-preview-overlay{min-height:245px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center;background:linear-gradient(145deg,rgba(28,48,37,.76),rgba(47,65,45,.43));color:#fffdf6}
+.gift-card-preview-overlay>span{font-size:.68rem;letter-spacing:1.8px;font-weight:650;color:#f3d99e}
+.gift-card-preview-overlay>strong{font-family:'Manrope',sans-serif;font-size:1.55rem;font-weight:500;letter-spacing:-.5px}
+.gift-card-preview-overlay>p{max-width:390px;margin:4px 0;font-family:'Manrope',sans-serif;font-size:var(--text-ui);line-height:1.5;color:#fffdf6;overflow-wrap:anywhere}
+.gift-card-preview-overlay>a{font-size:.75rem;color:#f3d99e;overflow-wrap:anywhere}
+.gift-card-preview-overlay>strong,.gift-card-preview-overlay>small{max-width:100%;overflow-wrap:anywhere}
+.gift-card-preview-overlay>small{font-family:Georgia,serif;font-size:.9rem;color:#fffdf6}
+.gift-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.gift-actions .full{margin-top:0}
+.gift-fallback-text{margin-top:14px;min-height:145px;font-size:.875rem;line-height:1.6}
+@media(max-width:520px){
+ .gift-actions{grid-template-columns:1fr}
+ .gift-card-preview{min-height:270px}
+ .gift-card-preview-overlay{min-height:270px;padding:20px 16px}
+}
 .gift-letter{height:auto;min-height:17.1875rem}
 .gift-letter>span:last-child{margin-top:1rem}
 
