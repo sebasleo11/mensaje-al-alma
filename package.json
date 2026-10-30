@@ -14,7 +14,7 @@
     "@supabase/supabase-js": "^2.117.2",
     "lucide-react": "latest",
     "mercadopago": "3.2.1",
-    "next": "latest",
+    "next": "16.4.3",
     "react": "latest",
     "react-dom": "latest",
     "resend": "^6.32.0",
