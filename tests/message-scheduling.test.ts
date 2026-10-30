@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { transformSync } from 'esbuild';
-import { formatUtcOffset,scheduleTime,occupiedSlots,overdue,missingScheduleSchema,latestSchedule,schedulePresentation } from '../lib/messages/scheduling';
+import { formatUtcOffset,formatLocalDateTime,formatStoredTimestamp,scheduleTime,occupiedSlots,overdue,missingScheduleSchema,latestSchedule,schedulePresentation } from '../lib/messages/scheduling';
 export async function verifyScheduling(){
  const panel=readFileSync('components/messages/MessagesPanel.tsx','utf8');
  assert.match(panel,/Guardar borrador/);
@@ -14,6 +14,10 @@ export async function verifyScheduling(){
  assert.doesNotMatch(panel,/El envío automático aún no está habilitado/);
  assert.match(panel,/const refreshed=await reload\(\)/);
  assert.match(panel,/schedule-status-card/);
+ assert.match(panel,/renderBucket\('scheduled','Programados'/);
+ assert.match(panel,/renderBucket\('drafts','Borradores'/);
+ assert.match(panel,/renderBucket\('sent','Enviados'/);
+ assert.match(panel,/Conocé los formatos y precios/);
  assert.match(panel,/status:r.status/);
  const schedule:any={id:'22222222-2222-4222-8222-222222222222',message_id:'11111111-1111-4111-8111-111111111111',state:'scheduled',updated_at:'2026-10-13T12:01:00Z',local_datetime:'2099-01-01T09:00',time_zone:'America/Argentina/Buenos_Aires',utc_offset_minutes:-180};
  assert.equal(schedulePresentation(schedule).label,'En espera de envío');
@@ -26,6 +30,8 @@ export async function verifyScheduling(){
  assert.equal(schedulePresentation({...schedule,state:'finished'},'uncertain').label,'Resultado incierto');
  assert.equal(latestSchedule([{...schedule,updated_at:'2026-10-13T12:00:00Z'},{...schedule,updated_at:'2026-10-13T12:02:00Z',state:'cancelled'}],schedule.message_id)?.state,'cancelled');
  assert.equal(formatUtcOffset(-180),'UTC−03:00');assert.equal(formatUtcOffset(345),'UTC+05:45');
+ assert.equal(formatLocalDateTime('2026-10-29T17:50'),'29/10/2026 · 17:50 h');
+ assert.equal(formatStoredTimestamp('2026-10-29T20:50:00Z'),'29/10/2026 · 17:50 h');
  const now=Date.parse('2026-10-13T12:00:00Z');
  assert.equal(scheduleTime('2026-10-13T09:05','America/Argentina/Buenos_Aires',undefined,now).scheduledAt,'2026-10-13T12:05:00.000Z');
  for(const local of ['2026-02-30T09:00','invalid','2026-10-12T09:00','2026-10-13T09:04'])assert.throws(()=>scheduleTime(local,'America/Argentina/Buenos_Aires',undefined,now));

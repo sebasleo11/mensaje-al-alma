@@ -1,5 +1,16 @@
 import type { MessageSchedule } from '@/utils/supabase/database.types';
 export function formatUtcOffset(minutes:number) { const absolute=Math.abs(minutes);return `UTC${minutes<0?'−':'+'}${String(Math.floor(absolute/60)).padStart(2,'0')}:${String(absolute%60).padStart(2,'0')}`; }
+export function formatLocalDateTime(local:string) {
+ const match=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(local);
+ if(!match)return local;
+ const [,year,month,day,hour,minute]=match;
+ return `${day}/${month}/${year} · ${hour}:${minute} h`;
+}
+export function formatStoredTimestamp(value:string,timeZone='America/Argentina/Buenos_Aires') {
+ const date=new Date(value);
+ if(!Number.isFinite(date.getTime()))return value;
+ return new Intl.DateTimeFormat('es-AR',{timeZone,day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(date).replace(',', ' ·')+' h';
+}
 export const MIN_ADVANCE_MS = 5 * 60_000;
 export const MAX_DELAY_MS = 15 * 60_000;
 export function activeSchedule(s: MessageSchedule) { return ['scheduled','blocked','dispatching'].includes(s.state); }
