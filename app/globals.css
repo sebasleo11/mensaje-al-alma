@@ -396,3 +396,128 @@ dialog{overflow:auto}
  .message-library .messages-accordion summary{padding-inline:12px}
 }
 :root[data-theme=dark] .message-library{background:#294135}
+
+/* Nueva composición visible de Mis mensajes: filtros, lista y próximo envío. */
+.messages-page{max-width:1240px;padding:28px 32px 72px;background:linear-gradient(180deg,transparent 0 92%,rgba(240,238,230,.5) 100%)}
+.messages-page main{position:relative}
+.messages-heading{margin:42px 0 28px;align-items:flex-end}
+.messages-heading h1{font-size:clamp(2.5rem,5vw,3.5rem);letter-spacing:-2.4px}
+.messages-heading-lede{font-size:1.25rem!important}
+.messages-layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start}
+.messages-main-column,.messages-side-column{min-width:0}
+.messages-library-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:10px}
+.message-filters{display:flex;gap:9px;overflow-x:auto;padding:3px 2px 7px;scrollbar-width:none}
+.message-filters::-webkit-scrollbar{display:none}
+.message-filters button{display:inline-flex;align-items:center;gap:9px;min-height:42px;padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:rgba(255,254,251,.78);color:var(--ink);white-space:nowrap;font-size:var(--text-ui)}
+.message-filters button:hover{background:var(--pale)}
+.message-filters button.active{background:var(--green);border-color:var(--green);color:#fffdf8}
+.message-filters button span{display:grid;place-items:center;min-width:24px;height:24px;padding-inline:5px;border-radius:999px;background:var(--pale);color:var(--green);font-size:.85rem}
+.message-filters button.active span{background:#f4f4e9;color:var(--green)}
+.message-list.message-library{padding:10px 20px;background:rgba(255,254,251,.9);border-radius:18px}
+.message-list .message-summary-card{display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:16px;align-items:center;margin:0;padding:20px 0;border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none;background:transparent;color:var(--ink)}
+.message-list .message-summary-card:last-child{border-bottom:0}
+.message-summary-icon{width:50px;height:50px;display:grid;place-items:center;border-radius:50%;background:var(--pale);color:var(--green)}
+.message-summary-card-sent .message-summary-icon{background:#e3ede0}
+.message-summary-card-other .message-summary-icon{background:var(--sand);color:#8a7042}
+.message-summary-main h3{font-size:1.15rem;margin:4px 0 5px;letter-spacing:-.3px}
+.message-summary-recipient{font-size:.9rem!important;color:var(--muted);line-height:1.35!important}
+.message-summary-main .message-preview{font-size:1rem!important;line-height:1.5!important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.message-summary-tags{display:flex;align-items:center;flex-wrap:wrap;gap:9px 14px;margin-top:10px;color:var(--muted);font-size:.9rem}
+.message-status{display:inline-flex;align-items:center;min-height:27px;padding:4px 10px;border-radius:999px;background:var(--pale);color:var(--green);font-size:.9rem}
+.message-status-scheduled{background:#fff3d9;color:#8b5b12}.message-status-blocked,.message-status-uncertain{background:var(--sand);color:#8a7042}.message-status-finished,.message-status-sent{background:#e5eee3;color:#2f5740}.message-status-drafts{background:#f0f1ee;color:#59645d}
+.message-list .message-summary-card>.button{min-width:145px;padding:12px 15px}
+.messages-empty-state{display:grid;justify-items:center;gap:12px;padding:50px 20px;text-align:center}
+.messages-empty-state h2{font-size:1.35rem}.messages-empty-state p{max-width:470px;color:var(--muted);font-size:1rem!important}
+.next-message-panel{background:rgba(255,254,251,.92);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 14px 30px rgba(38,57,44,.08);margin-bottom:18px}
+.next-message-art{height:128px;background-position:center;background-size:cover;display:grid;place-items:center;position:relative}
+.next-message-art::after{content:'';position:absolute;inset:0;background:rgba(42,66,50,.25)}
+.next-message-art span{position:relative;z-index:1;width:58px;height:58px;display:grid;place-items:center;border-radius:50%;background:#fffefbe8;color:var(--green)}
+.next-message-content{padding:20px 20px 22px}.next-message-content .eyebrow,.next-message-empty .eyebrow{font-size:.78rem;letter-spacing:1.3px}.next-message-content h2,.next-message-empty h2{font-size:1.45rem;line-height:1.3;margin:10px 0}.next-message-content>p,.next-message-empty>p{font-size:1rem!important;line-height:1.55!important;color:var(--muted)}
+.next-message-content dl{display:grid;gap:14px;margin:19px 0}.next-message-content dl div{display:grid;grid-template-columns:24px minmax(0,1fr);gap:9px;align-items:start}.next-message-content dt{color:var(--green)}.next-message-content dd{margin:0;overflow-wrap:anywhere;font-size:1rem;line-height:1.45}
+.next-message-empty{padding:28px 22px 24px;text-align:center}.next-message-empty .next-message-empty-icon{width:65px;height:65px;display:grid;place-items:center;margin:0 auto 19px;border-radius:50%;background:var(--pale);color:var(--green)}
+.next-message-empty .full{margin-top:18px}.messages-side-column .pricing-accordion{margin:0}.messages-side-column .pricing-accordion summary{padding:16px 12px}.messages-side-column .pricing-accordion summary::after{display:none}.messages-side-column .pricing-accordion summary svg{color:var(--green)}
+@media(max-width:900px){.messages-layout{grid-template-columns:minmax(0,1fr) 285px}.message-list .message-summary-card{grid-template-columns:46px minmax(0,1fr) auto;gap:12px}.message-summary-icon{width:44px;height:44px}.message-list .message-summary-card>.button{min-width:118px}}
+@media(max-width:760px){.messages-page{max-width:none;padding:24px 16px 56px}.messages-heading{margin:30px 0 22px}.messages-heading h1{font-size:2.55rem}.messages-layout{display:block}.messages-side-column{margin-top:18px}.messages-library-toolbar{display:block}.messages-library-toolbar>.auth-nav-link{margin-top:2px}.message-filters{margin-right:-16px;padding-right:16px}.message-list.message-library{padding-inline:14px}.message-list .message-summary-card{grid-template-columns:43px minmax(0,1fr);padding:18px 0}.message-summary-icon{width:40px;height:40px}.message-summary-main h3{font-size:1.05rem}.message-list .message-summary-card>.button{grid-column:2;width:100%;min-width:0;margin-top:4px}.next-message-panel{margin-bottom:14px}.next-message-art{height:110px}}
+@media(max-width:420px){.messages-heading h1{font-size:2.3rem}.messages-heading-lede{font-size:1.08rem!important}.message-filters button{padding-inline:12px;font-size:1rem}.message-list .message-summary-card{grid-template-columns:36px minmax(0,1fr);gap:10px}.message-summary-icon{width:34px;height:34px}.message-summary-icon svg{width:18px}.message-summary-tags{gap:7px;font-size:.82rem}.message-status{font-size:.82rem}.message-list .message-summary-card>.button{grid-column:1/-1}}
+
+/* Ajustes finos posteriores a la revisión visual. */
+.messages-layout{grid-template-columns:minmax(0,1fr) 320px}
+.messages-main-column{min-width:0}
+.messages-side-column{display:contents}
+.messages-side-column>.next-message-panel{grid-column:2;grid-row:1}
+.messages-side-column>.pricing-accordion{grid-column:1/-1;grid-row:2;width:100%;margin:18px 0 0}
+.messages-library-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}
+.message-filters{min-width:0}
+.message-filters button{flex:0 0 auto;flex-wrap:nowrap!important;align-items:center;justify-content:center;line-height:1.2;white-space:nowrap}
+.message-filters button span{display:inline-grid;flex:0 0 auto;line-height:1}
+.messages-library-toolbar>.auth-nav-link{flex:0 0 auto;white-space:nowrap}
+.pricing-accordion{min-width:0}
+.pricing-options{padding:0 16px 12px}
+.pricing-option{grid-template-columns:minmax(0,1fr) auto auto;min-width:0}
+.pricing-option>strong{white-space:nowrap}
+.pricing-option>.button{white-space:nowrap;flex:0 0 auto}
+.message-editor{width:min(100%,820px);margin:22px auto 0}
+@media(max-width:900px){.messages-layout{grid-template-columns:minmax(0,1fr) 285px}.messages-side-column>.next-message-panel{grid-column:2}.messages-side-column>.pricing-accordion{grid-column:1/-1}}
+@media(max-width:760px){.messages-layout{display:block}.messages-side-column{display:block}.messages-side-column>.next-message-panel,.messages-side-column>.pricing-accordion{display:block;width:100%;margin-top:18px}.messages-library-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}.messages-library-toolbar>.auth-nav-link{justify-self:end;margin-top:0}.message-filters{padding-right:0;margin-right:0}.message-editor{width:100%;margin-top:18px}.pricing-options{padding-inline:12px}.pricing-option{grid-template-columns:minmax(0,1fr) auto;gap:10px}.pricing-option>.button{grid-column:1/-1;width:100%;justify-self:stretch}}
+@media(max-width:560px){.messages-library-toolbar{display:block}.messages-library-toolbar>.auth-nav-link{justify-self:start;margin-top:4px}.message-filters{width:100%}}
+
+/* Mis mensajes tiene dos vistas: listado o editor/detalle. */
+.messages-page:has(.message-editor) .messages-heading,
+.messages-page:has(.message-editor) .messages-layout{display:none}
+.messages-page:has(.message-editor) .message-editor{margin-top:28px}
+
+/* Toolbar independiente y filtros que pueden envolver sin ocultar estados. */
+.messages-library-toolbar{display:block;margin-bottom:10px}
+.message-filters{display:flex;flex-wrap:wrap;overflow:visible;row-gap:8px;padding:3px 2px 2px}
+.messages-library-toolbar>.auth-nav-link{display:flex;width:max-content;margin:9px 0 0 auto;white-space:nowrap}
+@media(max-width:760px){.messages-library-toolbar>.auth-nav-link{margin:9px 0 0 0}.message-filters{padding-right:2px}}
+
+/* Composición fiel a Diario de momentos. */
+body:has(.messages-page){background-color:#f3eee5;background-image:linear-gradient(90deg,rgba(250,249,246,.87),rgba(250,249,246,.63) 55%,rgba(250,249,246,.76)),url('/images/hero-background-still.webp');background-size:cover;background-position:center top;background-attachment:fixed}
+.messages-page{width:min(1320px,calc(100% - 48px));max-width:none;padding:28px 0 72px;background:transparent}
+.messages-header{padding:0 18px 25px;border-bottom-color:rgba(255,255,255,.7)}
+.messages-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;margin:40px 20px 27px;gap:30px}
+.messages-heading h1{font-size:clamp(2.8rem,4vw,3.55rem);margin:10px 0 4px;letter-spacing:-2.7px}
+.messages-heading-lede{font-size:1.25rem!important;margin:0 0 9px!important}
+.messages-heading>div>p:last-child{font-size:1.12rem!important;color:var(--ink)!important}
+.messages-heading>.button.primary{min-width:250px;margin-bottom:34px}
+.messages-layout{grid-template-columns:minmax(0,1fr) 320px;gap:18px;margin:0 0 0}
+.messages-main-column{min-width:0}
+.messages-library-toolbar{padding:18px 20px 16px;margin:0 0 10px;background:rgba(255,254,251,.96);border:1px solid rgba(255,255,255,.85);border-radius:16px;box-shadow:0 12px 28px rgba(38,57,44,.06)}
+.message-filters{padding:0;row-gap:8px;column-gap:18px}
+.message-filters button{min-height:40px;padding:7px 13px;background:rgba(250,249,246,.72);border-color:#ecece5}
+.messages-library-toolbar>.auth-nav-link{margin:11px 0 0 auto}
+.message-list.message-library{padding:10px 20px;background:rgba(255,254,251,.97);border:1px solid rgba(255,255,255,.85);border-radius:16px;box-shadow:0 12px 28px rgba(38,57,44,.06)}
+.message-list .message-summary-card{grid-template-columns:54px minmax(0,1fr) minmax(180px,230px) 145px;gap:16px;padding:22px 0;align-items:center}
+.message-summary-main{min-width:0}
+.message-summary-recipient{font-size:.95rem!important;color:var(--muted);line-height:1.35!important;overflow-wrap:anywhere}
+.message-summary-main h3{font-size:1.15rem;margin:5px 0 6px;letter-spacing:-.3px}
+.message-summary-main .message-preview{font-size:.98rem!important;line-height:1.5!important}
+.message-summary-meta{display:grid;justify-items:start;gap:6px;min-width:0;white-space:normal}
+.message-summary-meta strong{font-size:1rem;font-weight:500;color:var(--muted);line-height:1.35}
+.message-summary-meta small{font-size:.86rem!important;color:var(--muted);overflow-wrap:anywhere}
+.message-summary-meta .message-status{max-width:100%;white-space:normal;text-align:left}
+.message-list .message-summary-card>.button{width:145px;min-width:0;justify-self:end}
+.next-message-panel{background:rgba(255,254,251,.97);border-color:rgba(255,255,255,.85);box-shadow:0 12px 28px rgba(38,57,44,.08)}
+.next-message-art{height:auto;aspect-ratio:3 / 2;background-position:center;background-size:cover}
+.next-message-art::after{background:transparent}
+.next-message-empty{padding:0}
+.next-message-empty-content{padding:21px 22px 23px;text-align:center}
+.next-message-content{padding:21px 22px 23px}
+.next-message-content h2,.next-message-empty h2{font-size:1.5rem}
+.next-message-content>p,.next-message-empty>p{font-size:1rem!important}
+.messages-side-column>.pricing-accordion{padding:0 16px;background:rgba(255,254,251,.97);border-color:rgba(255,255,255,.85);border-radius:16px;box-shadow:0 12px 28px rgba(38,57,44,.06)}
+.messages-side-column>.pricing-accordion summary{min-height:110px;padding:18px 8px}
+.messages-side-column>.pricing-accordion summary strong{font-size:1.3rem}
+.messages-side-column>.pricing-accordion summary small{font-size:.98rem}
+.messages-side-column>.pricing-accordion .pricing-options{padding:0 8px 14px}
+.pricing-option{min-height:62px}
+.messages-page:has(.message-editor) .message-editor{width:min(760px,100%);margin:34px auto 0;background:rgba(255,254,251,.97);box-shadow:0 12px 28px rgba(38,57,44,.08);border-radius:16px}
+@media(max-width:1050px){.messages-page{width:min(100% - 32px,900px)}.messages-layout{grid-template-columns:minmax(0,1fr) 285px}.messages-heading{margin-inline:8px}.messages-heading>.button.primary{min-width:210px}.message-list .message-summary-card{grid-template-columns:46px minmax(0,1fr) minmax(150px,190px) 120px;gap:12px}.message-list .message-summary-card>.button{width:120px}}
+@media(max-width:760px){body:has(.messages-page){background-attachment:scroll}.messages-page{width:calc(100% - 32px);padding-top:20px}.messages-header{padding-inline:0}.messages-heading{display:block;margin:30px 0 22px}.messages-heading h1{font-size:2.6rem}.messages-heading>.button.primary{width:100%;margin:18px 0 0}.messages-layout{display:block}.messages-library-toolbar{padding:15px 14px}.message-filters{column-gap:8px}.message-filters button{padding-inline:11px}.message-list.message-library{padding-inline:14px}.message-list .message-summary-card{grid-template-columns:42px minmax(0,1fr);gap:10px;padding:19px 0}.message-summary-icon{width:40px;height:40px}.message-summary-meta{grid-column:2;grid-row:2;margin-top:3px}.message-list .message-summary-card>.button{grid-column:1/-1;grid-row:3;width:100%;justify-self:stretch;margin-top:4px}.messages-side-column>.next-message-panel,.messages-side-column>.pricing-accordion{margin-top:18px}.messages-side-column>.pricing-accordion summary{min-height:90px}.messages-side-column>.pricing-accordion summary strong{font-size:1.1rem}.next-message-empty-content{padding:18px 18px 20px}.messages-page:has(.message-editor) .message-editor{margin-top:20px}}
+@media(max-width:420px){.messages-page{width:calc(100% - 24px)}.messages-heading h1{font-size:2.35rem}.message-filters{column-gap:6px}.message-filters button{font-size:1rem;padding-inline:9px}.message-summary-main h3{font-size:1.05rem}.message-summary-meta{font-size:.9rem}.message-status{font-size:.84rem}.pricing-option{grid-template-columns:minmax(0,1fr) auto}.pricing-option>.button{grid-column:1/-1}}
+
+/* El wrapper común queda centrado y todos sus bloques comparten el mismo ancho. */
+.messages-page{margin-left:auto;margin-right:auto}
+.messages-page>main{width:100%;max-width:none}
+.messages-page .messages-header,.messages-page .messages-heading,.messages-page .messages-layout{width:100%}

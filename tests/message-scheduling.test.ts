@@ -14,9 +14,12 @@ export async function verifyScheduling(){
  assert.doesNotMatch(panel,/El envío automático aún no está habilitado/);
  assert.match(panel,/const refreshed=await reload\(\)/);
  assert.match(panel,/schedule-status-card/);
- assert.match(panel,/renderBucket\('scheduled','Programados'/);
- assert.match(panel,/renderBucket\('drafts','Borradores'/);
- assert.match(panel,/renderBucket\('sent','Enviados'/);
+ assert.match(panel,/message-filters/);
+ assert.match(panel,/label:'Programados'/);
+ assert.match(panel,/label:'Borradores'/);
+ assert.match(panel,/label:'Enviados'/);
+ assert.match(panel,/next-message-panel/);
+ assert.match(readFileSync('app/globals.css','utf8'),/messages-page:has\(\.message-editor\)/);
  assert.match(panel,/Conocé los formatos y precios/);
  assert.match(panel,/status:r.status/);
  const schedule:any={id:'22222222-2222-4222-8222-222222222222',message_id:'11111111-1111-4111-8111-111111111111',state:'scheduled',updated_at:'2026-10-13T12:01:00Z',local_datetime:'2099-01-01T09:00',time_zone:'America/Argentina/Buenos_Aires',utc_offset_minutes:-180};
