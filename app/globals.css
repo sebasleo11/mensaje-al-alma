@@ -521,3 +521,8 @@ body:has(.messages-page){background-color:#f3eee5;background-image:linear-gradie
 .messages-page{margin-left:auto;margin-right:auto}
 .messages-page>main{width:100%;max-width:none}
 .messages-page .messages-header,.messages-page .messages-heading,.messages-page .messages-layout{width:100%}
+
+/* Paginación dentro de la tarjeta de mensajes. */
+.message-pagination{display:flex;align-items:center;justify-content:center;gap:16px;padding:18px 0 8px;border-top:1px solid var(--line);color:var(--muted);font-size:var(--text-ui)}
+.message-pagination .button{min-width:104px;padding:10px 14px}
+@media(max-width:420px){.message-pagination{gap:10px;justify-content:space-between}.message-pagination .button{min-width:0;padding-inline:11px}.message-pagination span{white-space:nowrap;font-size:.92rem}}

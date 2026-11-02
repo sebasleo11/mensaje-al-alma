@@ -19,6 +19,13 @@ export async function verifyScheduling(){
  assert.match(panel,/label:'Borradores'/);
  assert.match(panel,/label:'Enviados'/);
  assert.match(panel,/next-message-panel/);
+ assert.match(panel,/const MESSAGE_PAGE_SIZE=5/);
+ assert.match(panel,/const paginatedMessages=filteredMessages\.slice/);
+ assert.match(panel,/Página \{visibleMessagePage\} de \{totalMessagePages\}/);
+ assert.match(panel,/Anterior/);
+ assert.match(panel,/Siguiente/);
+ assert.match(panel,/setMessagePage\(1\)/);
+ assert.match(readFileSync('app/globals.css','utf8'),/\.message-pagination/);
  assert.match(readFileSync('app/globals.css','utf8'),/messages-page:has\(\.message-editor\)/);
  assert.match(panel,/Conocé los formatos y precios/);
  assert.match(panel,/status:r.status/);
