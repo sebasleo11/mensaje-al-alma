@@ -77,6 +77,8 @@ export async function verifyScheduling(){
    if(name==='@/lib/messages/http')return {HttpError,authorize:async()=>{if(!originAllowed)throw new HttpError(403,'origin');if(!signedIn)throw new HttpError(401,'auth');return {user:{id:'owner',email_confirmed_at:'yes'}};},body:(r:Request)=>r.json(),validId:(v:string)=>{if(!/^[0-9a-f-]{36}$/.test(v))throw new HttpError(400,'id');return v;},reply:(data:any,status=200)=>Response.json(data,{status}),handled:async(fn:any)=>{try{return await fn();}catch(e:any){return Response.json({error:e.message},{status:e.status??503});}}};
    if(name==='@/utils/supabase/admin')return {createAdminClient:()=>({rpc:async(name:string,args:any)=>{calls.push({name,args});return result;}})};
    if(name==='@/lib/messages/scheduling')return {scheduleTime,missingScheduleSchema};
+   if(name==='@/lib/demo/mode')return {DEMO:false};
+   if(name==='@/lib/demo/api')return {};
    throw new Error('Unexpected dependency: '+name);
   }
  });

@@ -1,10 +1,12 @@
+import { DEMO } from '@/lib/demo/mode';
+import { demoDelete, demoGet, demoUpdate } from '@/lib/demo/api';
 import { missingScheduleSchema } from '@/lib/messages/scheduling';
 import { authorize, body, handled, HttpError, reply, validId } from '@/lib/messages/http';
 import { messageInput } from '@/lib/messages/panel';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { cleanupAsset } from '@/lib/media/storage';
 type Context={params:Promise<{id:string}>};
-export async function GET(request:Request,context:Context){return handled(async()=>{
+export async function GET(request:Request,context:Context){if(DEMO)return demoGet((await context.params).id);return handled(async()=>{
  const {client,user}=await authorize(request); const id=validId((await context.params).id);
  const {data,error}=await client.from('messages').select('*').eq('id',id).eq('user_id',user.id).maybeSingle();
  if(error)throw error;if(!data)throw new HttpError(404,'No encontramos ese mensaje en tu cuenta.');
@@ -17,7 +19,7 @@ export async function GET(request:Request,context:Context){return handled(async(
  if(schedules.error&&!missingScheduleSchema(schedules.error))throw schedules.error;
  return reply({schedule:schedules.data,schedulingAvailable:!schedules.error,message:data,asset:assets?.[0]??null,mediaUrl,attempt:attempt.data?.[0]??null});
 });}
-export async function PATCH(request:Request,context:Context){return handled(async()=>{
+export async function PATCH(request:Request,context:Context){if(DEMO)return demoUpdate(request,(await context.params).id);return handled(async()=>{
  const {client,user}=await authorize(request,true);const id=validId((await context.params).id);
  let fields;try{fields=messageInput(await body(request));}catch{throw new HttpError(400,'Revisá el destinatario y el contenido.');}
  // Format is immutable after creating the draft; changing it creates another message.
@@ -27,7 +29,7 @@ export async function PATCH(request:Request,context:Context){return handled(asyn
  if(error)throw new HttpError(409,'Este mensaje está protegido mientras comprobamos su envío. Tus cambios siguen en el editor.');
  return reply({message:data});
 });}
-export async function DELETE(request:Request,context:Context){return handled(async()=>{
+export async function DELETE(request:Request,context:Context){if(DEMO)return demoDelete((await context.params).id);return handled(async()=>{
  const {client,user}=await authorize(request,true);const id=validId((await context.params).id);
  const m=await client.from('messages').select('*').eq('id',id).eq('user_id',user.id).single();
  if(m.error||m.data.status!=='draft')throw new HttpError(409,'Sólo podés eliminar borradores sin envíos pendientes.');

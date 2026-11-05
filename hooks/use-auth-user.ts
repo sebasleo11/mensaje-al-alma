@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase/client';
 import { isSupabaseConfigured } from '@/utils/supabase/config';
+import { DEMO } from '@/lib/demo/mode';
 
 /** Session state for UI only. Database authorization remains enforced by RLS. */
 export function useAuthUser() {
@@ -11,7 +12,7 @@ export function useAuthUser() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isSupabaseConfigured()) {
+    if (!isSupabaseConfigured() && !DEMO) {
       setLoading(false);
       return;
     }

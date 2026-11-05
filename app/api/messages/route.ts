@@ -1,8 +1,10 @@
+import { DEMO } from '@/lib/demo/mode';
+import { demoCreate, demoList } from '@/lib/demo/api';
 import { quotaSummary } from '@/lib/messages/quota';
 import { missingScheduleSchema,occupiedSlots } from '@/lib/messages/scheduling';
 import { authorize, body, handled, HttpError, reply, validId } from '@/lib/messages/http';
 import { messageInput } from '@/lib/messages/panel';
-export async function GET(request: Request) { return handled(async () => {
+export async function GET(request: Request) { if (DEMO) return demoList(); return handled(async () => {
  const { client, user } = await authorize(request);
  const [messages, attempts, schedules, quota] = await Promise.all([
   client.from('messages').select('*').eq('user_id',user.id).order('created_at',{ascending:false}),
@@ -17,7 +19,7 @@ export async function GET(request: Request) { return handled(async () => {
  const balance=quota.error?quotaSummary({limit:3,additional:0,used:occupiedSlots(attempts.data,schedules.data??[]),remaining:Math.max(0,3-occupiedSlots(attempts.data,schedules.data??[]))}):quotaSummary(quota.data);
  return reply({ quota:balance, schedules:schedules.data??[], schedulingAvailable:!schedules.error, messages: messages.data, attempts: attempts.data, used: balance.used });
  }); }
-export async function POST(request: Request) { return handled(async () => {
+export async function POST(request: Request) { if (DEMO) return demoCreate(request); return handled(async () => {
  const { client, user } = await authorize(request,true);
  const input = await body(request);
  let fields; try { fields=messageInput(input); } catch { throw new HttpError(400,'Agregá un email válido y revisá tu mensaje.'); }
@@ -25,7 +27,7 @@ export async function POST(request: Request) { return handled(async () => {
  // A browser-generated stable UUID deduplicates an uncertain save, not identity.
  const { data: existing, error: lookupError } = await client.from('messages').select('*').eq('id',id).eq('user_id',user.id).maybeSingle();
  if(lookupError) throw lookupError;
- if(existing){if(existing.recipient_email!==fields.recipient_email||existing.content_body!==fields.content_body||existing.content_type!==fields.content_type)throw new HttpError(409,'Este borrador ya se guardó con otras palabras. Volvé a abrirlo para conservar ambas versiones.');return reply({message:existing});}
+ if(existing){if(existing.recipient_email!==fields.recipient_email||existing.content_body!==fields.content_body||existing.content_type!==fields.content_type||existing.letter_paper!==fields.letter_paper||existing.letter_font!==fields.letter_font||existing.release_on_lapse!==fields.release_on_lapse)throw new HttpError(409,'Este borrador ya se guardó con otras palabras. Volvé a abrirlo para conservar ambas versiones.');return reply({message:existing});}
  const { data,error }=await client.from('messages').insert({id,user_id:user.id,...fields,status:'draft'}).select('*').single();
  if(error) throw error;
  return reply({message:data},201);

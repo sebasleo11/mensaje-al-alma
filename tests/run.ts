@@ -1,3 +1,4 @@
+import { verifyCheckinPolicy } from './checkin-policy.test';
 import { verifyQuota } from './message-quota.test';
 import { verifySchedulingPanel } from './message-scheduling-panel.test';
 import { verifyScheduling } from './message-scheduling.test';
@@ -54,7 +55,7 @@ async function verifySignup() {
   assert.equal(requests, 1);
 }
 
-verifySignup().then(verifyDrafts).then(verifyDraftHook).then(verifyMessageFeatures).then(verifyMessageHttp).then(verifyScheduling).then(verifySchedulingPanel).then(verifyQuota).then(verifyMercadoPago).then(() => console.log('OK: configuración, errores de Auth y signup con transporte simulado.')).catch(() => {
+verifySignup().then(verifyDrafts).then(verifyDraftHook).then(verifyMessageFeatures).then(verifyMessageHttp).then(verifyScheduling).then(verifySchedulingPanel).then(verifyQuota).then(verifyMercadoPago).then(verifyCheckinPolicy).then(() => console.log('OK: configuración, errores de Auth y signup con transporte simulado.')).catch(() => {
   console.error('Falló la verificación de Auth o borradores.');
   process.exitCode = 1;
 });

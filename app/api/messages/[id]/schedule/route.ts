@@ -1,3 +1,5 @@
+import { DEMO } from '@/lib/demo/mode';
+import { demoSchedule } from '@/lib/demo/api';
 import { authorize,body,handled,HttpError,reply,validId } from '@/lib/messages/http';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { missingScheduleSchema,scheduleTime } from '@/lib/messages/scheduling';
@@ -17,7 +19,7 @@ function scheduleRpcMessage(message:string, action:string) {
  };
  return known[message]??(process.env.NODE_ENV==='development'&&message?message:action==='confirm'?'No pudimos crear la programación. Revisá fecha, cupo y versión.':'No pudimos actualizar la programación. Revisá fecha, cupo y versión.');
 }
-export async function POST(request:Request,context:{params:Promise<{id:string}>}){return handled(async()=>{
+export async function POST(request:Request,context:{params:Promise<{id:string}>}){if(DEMO)return demoSchedule(request,(await context.params).id);return handled(async()=>{
  const {user}=await authorize(request,true);
  if(!user.email_confirmed_at)throw new HttpError(403,'Confirmá el email de tu cuenta antes de programar.');
  const id=validId((await context.params).id),input=await body(request);

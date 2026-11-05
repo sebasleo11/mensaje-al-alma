@@ -3,10 +3,12 @@ export type ContentType = 'text' | 'audio' | 'video' | 'photo';
 export type Message = {
   id: string; user_id: string; recipient_email: string; content_type: ContentType;
   content_body: string; status: 'draft' | 'saved' | 'sent'; created_at: string; updated_at: string; archived_at: string | null;
+  letter_paper: string; letter_font: string; release_on_lapse: boolean;
 };
 export type Asset = { id: string; message_id: string; user_id: string; path: string; mime: string; bytes: number; duration: number | null; removed_at: string | null; state: 'pending' | 'ready' | 'deleting'; created_at: string };
 export type AttemptState = 'prepared' | 'sending' | 'uncertain' | 'accepted' | 'delivered' | 'bounced' | 'failed';
-export type SendAttempt = { id: string; message_id: string; user_id: string; recipient_email: string; content_type: ContentType; content_body: string; asset_id: string | null; email_payload: Record<string, unknown> | null; sender: string; app_url: string; state: AttemptState; provider_id: string | null; lease_until: string | null; revoked_at: string | null; created_at: string; updated_at: string };
+export type SendAttempt = { id: string; message_id: string; user_id: string; recipient_email: string; content_type: ContentType; content_body: string; asset_id: string | null; email_payload: Record<string, unknown> | null; sender: string; app_url: string; state: AttemptState; provider_id: string | null; lease_until: string | null; revoked_at: string | null; created_at: string; updated_at: string; letter_paper: string; letter_font: string };
+export type LifeCheckin = { user_id: string; last_checkin_at: string; reminder_stage: number; last_reminder_at: string | null; released_at: string | null; created_at: string };
 export type MessageQuota = { limit:number; additional:number; used:number; remaining:number };
 export type PaymentOrder = { id:string; user_id:string; package_code:string; credit_amount:number; amount:number; currency:'ARS'; status:'pending'|'approved'|'rejected'|'cancelled'|'refunded'|'charged_back'; external_reference:string; idempotency_key:string; mp_preference_id:string|null; mp_payment_id:string|null; mp_status:string|null; mp_status_detail:string|null; created_at:string; updated_at:string; approved_at:string|null };
 export type MessageCreditGrant = { id:string; user_id:string; source_type:'mercado_pago'; source_id:string; amount:number; status:'active'|'revoked'; created_at:string };
@@ -14,16 +16,19 @@ export type MessageSchedule = { id:string; message_id:string; user_id:string; sc
 type Table<Row, Insert = Partial<Row>, Update = Partial<Row>> = { Row: Row; Insert: Insert; Update: Update; Relationships: [] };
 export type Database = {
  public: { Tables: {
-  messages: Table<Message, Omit<Message,'id'|'created_at'|'updated_at'|'status'|'archived_at'> & { id?: string; created_at?: string; updated_at?: string; status?: Message['status'] }>;
+  messages: Table<Message, Omit<Message,'id'|'created_at'|'updated_at'|'status'|'archived_at'|'letter_paper'|'letter_font'|'release_on_lapse'> & { letter_paper?: string; letter_font?: string; release_on_lapse?: boolean; id?: string; created_at?: string; updated_at?: string; status?: Message['status'] }>;
   message_schedules: Table<MessageSchedule>;
   message_assets: Table<Asset>;
   message_send_attempts: Table<SendAttempt>;
+  life_checkins: Table<LifeCheckin>;
   message_send_accounts: Table<{ user_id: string; created_at: string }>;
   payment_orders: Table<PaymentOrder>;
   message_credit_grants: Table<MessageCreditGrant>;
  }; Views: { [_ in never]: never }; Functions: {
   change_message_schedule: { Args: {p_user:string;p_message:string;p_id:string;p_action:string;p_expected:string|null;p_version:number|null;p_at:string|null;p_zone:string|null;p_local:string|null;p_offset:number|null}; Returns: MessageSchedule };
   begin_message_schedule: {Args:{p_user:string;p_message:string;p_id:string;p_version:number;p_sender:string;p_app_url:string};Returns:SendAttempt|null};
+  record_life_checkin: { Args: { p_user: string }; Returns: LifeCheckin };
+  life_checkin_candidates: { Args: Record<string,never>; Returns: {user_id:string;last_checkin_at:string;reminder_stage:number;released_at:string|null;next_schedule:string|null;scheduled_count:number;legacy_count:number}[] };
   get_message_quota: { Args: Record<string,never>; Returns: MessageQuota };
   orphan_message_assets: { Args: Record<string, never>; Returns: {id:string;user_id:string}[] };
   message_locked: { Args: { p_id: string }; Returns: boolean };

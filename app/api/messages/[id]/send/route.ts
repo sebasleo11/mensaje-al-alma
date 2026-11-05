@@ -1,3 +1,5 @@
+import { DEMO } from '@/lib/demo/mode';
+import { demoSend } from '@/lib/demo/api';
 import type { CreateEmailOptions } from 'resend';
 import { authorize, body, handled, HttpError, reply, validId } from '@/lib/messages/http';
 import { createAdminClient } from '@/utils/supabase/admin';
@@ -5,7 +7,7 @@ import { createResendClient, getEmailConfiguration } from '@/utils/resend';
 import { messageEmail } from '@/lib/email/message';
 import { sendMessage } from '@/lib/messages/send';
 export const maxDuration=60;
-export async function POST(request:Request,context:{params:Promise<{id:string}>}){return handled(async()=>{
+export async function POST(request:Request,context:{params:Promise<{id:string}>}){if(DEMO)return demoSend((await context.params).id);return handled(async()=>{
  const {user}=await authorize(request,true);if(!user.email_confirmed_at)throw new HttpError(403,'Confirmá el email de tu cuenta antes de enviar.');
  const id=validId((await context.params).id);const input=await body(request);const expected=typeof input.expectedUpdatedAt==='string'?input.expectedUpdatedAt:'';if(!expected||!Number.isFinite(Date.parse(expected)))throw new HttpError(409,'Volvé a abrir el borrador y confirmá su contenido antes de enviar.');const config=getEmailConfiguration();const resend=createResendClient();const admin=createAdminClient();
  const secret=process.env.RECIPIENT_TOKEN_SECRET??'';if(secret.length<32)throw new HttpError(503,'El envío todavía no está configurado. Podés guardar tu borrador.');
